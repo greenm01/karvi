@@ -2,6 +2,8 @@ package colorful
 
 import "core:math"
 
+hsluv_d65 := [3]float64{0.95045592705167, 1.0, 1.089057750759878}
+
 m := [3][3]f64{
 	{3.2409699419045214, -1.5373831775700935, -0.49861076029300328},
 	{-0.96924363628087983, 1.8759675015077207, 0.041555057407175613},
@@ -49,7 +51,7 @@ length_of_ray_until_intersect :: proc(theta, x, y: f64) -> (length: f64) {
 	return
 }
 
-HSLuv_to_LuvLCh :: proc(h, s, l: f64) -> (f64, f64, f64) {
+hsluv_to_luvlch :: proc(h, s, l: f64) -> (f64, f64, f64) {
 	l *= 100.0
 	s *= 100.0
 
@@ -71,17 +73,17 @@ HSLuv_to_LuvLCh :: proc(h, s, l: f64) -> (f64, f64, f64) {
 //
 // The returned color values are clamped (using .Clamped), so this will never output
 // an invalid color.
-HSLuv :: proc(h, s, l: f64) -> Color {
+hsluv :: proc(h, s, l: f64) -> Color {
 	// HSLuv -> LuvLCh -> CIELUV -> CIEXYZ -> Linear RGB -> sRGB
-	l, u, v := LuvLChToLuv(HSLuv_to_LuvLCh(h, s, l))
-	return LinearRgb(XyzToLinearRgb(LuvToXyzWhiteRef(l, u, v, hSLuvD65))).Clamped()
+	l, u, v := luvlch_to_luv(hsluv_to_luvlch(h, s, l))
+	return clamped(linear_rgb(xyz_to_linear_rgb(luv_to_xyz_white_ref(l, u, v, hSluv_d65))))
 }
 
 // DistanceHSLuv calculates Euclidan distance in the HSLuv colorspace. 
 // The Hue value is divided by 100 before the calculation, so that H, S, and L
 // have the same relative ranges.
-distance_HSLuv :: proc(c1: Color, c2: Color) -> f64 {
-	h1, s1, l1 := HSLuv(c1)
-	h2, s2, l2 := HSLuv(c2)
+distance_hsluv :: proc(c1: Color, c2: Color) -> f64 {
+	h1, s1, l1 := hsluv(c1)
+	h2, s2, l2 := hsluv(c2)
 	return math.sqrt(sq((h1-h2)/100.0) + sq(s1-s2) + sq(l1-l2))
 }

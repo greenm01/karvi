@@ -1,16 +1,10 @@
 package karvi
 
 import "core:strings"
+import "core:strconv"
 
-/*
-import (
-	"image/color"
-	"strconv"
-	"strings"
-
-	"github.com/lucasb-eyer/go-colorful"
-)
-*/
+import "colorful"
+import "colorful/color"
 
 // Profile is a color profile: Ascii, ANSI, ANSI256, or TrueColor.
 Profile :: int
@@ -46,7 +40,7 @@ profile_convert :: proc(p: Profile, c: Color) -> Color {
 
 	case ANSI256:
 		if p == ANSI {
-			return ansi256ToANSIColor(v)
+			return ansi256_to_ansi(v)
 		}
 		return v
 
@@ -79,7 +73,7 @@ profile_color :: proc(p: Profile, s: string) -> Color {
 	if strings.has_prefix(s, "#") {
 		c = RGB(s)
 	} else {
-		i, err := strconv.Atoi(s)
+		i, err := strconv.atoi(s)
 		if err != nil {
 			return nil
 		}
@@ -91,11 +85,11 @@ profile_color :: proc(p: Profile, s: string) -> Color {
 		}
 	}
 
-	return p.Convert(c)
+	return profile_convert(p, c)
 }
 
 // FromColor creates a Color from a color.Color.
 profile_from_color :: proc(p: Profile, c: color.Color) -> Color {
-	col, _ := colorful.MakeColor(c)
+	col, _ := colorful.make_color(c)
 	return p.Color(col.Hex())
 }

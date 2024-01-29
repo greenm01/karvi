@@ -3,20 +3,12 @@ package karvi
 import "core:fmt"
 import "core:math"
 import "core:strings"
-import "core:os"
-/*
-import (
-	"errors"
-	"fmt"
-	"math"
-	"strings"
 
-	"github.com/lucasb-eyer/go-colorful"
-)
-*/
+import "colorful"
 
 Error :: enum {
-   Invalid_Color = os.ERROR_INVALID_PARAMETER,
+	No_Error,
+	Invalid_Color,
 }
 
 // FOREGROUND and BACKGROUND sequence codes
@@ -48,7 +40,7 @@ ansi_string :: proc(c: ANSI) -> string {
 // ANSI256 is a color (16-255) as defined by the ANSI Standard.
 ANSI256 :: int
 
-ansi256_string(c: ANSI256) -> string {
+ansi256_string :: proc(c: ANSI256) -> string {
 	return ANSI_HEX[c]
 }
 
@@ -56,7 +48,7 @@ ansi256_string(c: ANSI256) -> string {
 RGB :: string
 
 // ConvertToRGB converts a Color to a colorful.Color.
-convert_to_rbg :: proc(c Color) -> colorful.Color {
+convert_to_rbg :: proc(c: Color) -> colorful.Color {
 	hex: string
 	switch v in c.type {
 	case RGB:
@@ -122,9 +114,10 @@ rgb_sequence :: proc(c: RGB, bg: bool) -> string {
 	return fmt.tprintf("%s;2;%d;%d;%d", prefix, u8(f.r*255), u8(f.g*255), u8(f.b*255))
 }
 
-xterm_color :: proc(s: string) -> (RGB, os.Errno) {
+xterm_color :: proc(s: string) -> (RGB, Error) {
+	using Error
 	if len(s) < 24 || len(s) > 25 {
-		return RGB(""), .Invalid_Color
+		return RGB(""), Invalid_Color
 	}
 
 	switch {
@@ -134,8 +127,8 @@ xterm_color :: proc(s: string) -> (RGB, os.Errno) {
 		s = strings.trim_suffix(s, string(ESC))
 	case strings.has_suffix(s, ST):
 		s = strings.trim_suffix(s, ST)
-	default:
-		return RGB(""), .Invalid_Color
+	case:
+		return RGB(""), Invalid_Color
 	}
 
 	s = s[4:]
@@ -148,7 +141,7 @@ xterm_color :: proc(s: string) -> (RGB, os.Errno) {
 
 	h := strings.split(s, "/")
 	hex := fmt.tprintf("#%s%s%s", h[0][:2], h[1][:2], h[2][:2])
-	return RGB(hex), os.ERROR_NONE
+	return RGB(hex), No_Error
 }
 
 ansi256_to_ansi :: proc(c: ANSI256) -> ANSI {
@@ -156,9 +149,9 @@ ansi256_to_ansi :: proc(c: ANSI256) -> ANSI {
 	md := math.F64_MAX
 
 	h, _ := colorful.hex(ANSI_HEX[c])
-	for i := 0; i <= 15; i++ {
+	for i := 0; i <= 15; i += 1 {
 		hb, _ := colorful.hex(ANSI_HEX[i])
-		d := colorful.distance_HSLuv(h, hb)
+		d := colorful.distance_hsluv(h, hb)
 
 		if d < md {
 			md = d
@@ -203,13 +196,11 @@ hex_to_ansi256 :: proc(c: colorful.Color) -> ANSI256 {
 	gv := 8 + 10*gray_idx // same value for r/g/b, 0..255
 
 	// Return the one which is nearer to the original input rgb value
-	c2 := colorful.Color{R: f64(cr) / 255.0, G: f64(cg) / 255.0, B: f64(cb) / 255.0}
-	g2 := colorful.Color{R: f64(gv) / 255.0, G: f64(gv) / 255.0, B: f64(gv) / 255.0}
-	color_dist := colorful.distance_HSLuv(c, c2)
-	gray_dist := colorful.distance_HSLuv(c, g2)
+	c2 := colorful.Color{r = f64(cr) / 255.0, g = f64(cg) / 255.0, b = f64(cb) / 255.0}
+	g2 := colorful.Color{r = f64(gv) / 255.0, g = f64(gv) / 255.0, b = f64(gv) / 255.0}
+	color_dist := colorful.distance_hsluv(c, c2)
+	gray_dist := colorful.distance_hsluv(c, g2)
 
-	if color_dist <= gray_dist {
-		return ANSI256(16 + ci)
-	}
+	if color_dist <= gray_dist do return ANSI256(16 + ci)
 	return ANSI256(232 + gray_idx)
 }

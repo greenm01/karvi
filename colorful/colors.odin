@@ -31,8 +31,8 @@ make_color :: proc(col: color.Color) -> (Color, bool) {
 }
 
 // Hex parses a "html" hex color-string, either in the 3 "#f0c" or 6 "#ff1034" digits form.
-hex :: proc(scol: string) -> (Color, Error) {
-	using Error
+hex :: proc(scol: string) -> (Color, karvi.Error) {
+	using karvi.Error
 	format := "#%02x%02x%02x"
 	factor := 1.0 / 255.0
 	if len(scol) == 4 {

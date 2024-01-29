@@ -13,9 +13,9 @@ Output_Option :: proc(^Output)
 
 // Output is a terminal output.
 Output :: struct {
-	using profile: Profile
-	w:             io.Writer,
-	environ:       Environ,
+	profile: Profile,
+	w:       os.Handle,
+	environ: Environ,
 
 	assume_tty: bool,
 	unsafe:     bool,
@@ -45,7 +45,7 @@ get_env :: proc(key: string) -> string {
 }
 
 // DefaultOutput returns the default global output.
-default_output :: proc() ^Output {
+default_output :: proc() -> ^Output {
 	return output
 }
 
@@ -55,7 +55,7 @@ set_default_output :: proc(o: ^Output) {
 }
 
 // new_output returns a new Output for the given writer.
-new_output :: proc(w: io.Writer, opts: ..Output_Option) -> ^Output {
+new_output :: proc(w: os.Handle, opts: ..Output_Option) -> ^Output {
 	o := Output{
 		w        = w,
 		environ  = new_environ(),

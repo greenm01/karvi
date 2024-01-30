@@ -80,7 +80,7 @@ new_output :: proc(w: os.Handle, opts: ..Output_Option) -> ^Output {
 }
 
 // WithEnvironment returns a new Output_Option for the given environment.
-With_environment :: proc(environ: Environ) -> Output_Option {
+with_environment :: proc(environ: Environ) -> Output_Option {
 	return proc(o: ^Output) {
 		o.environ = environ
 	}
@@ -127,7 +127,7 @@ with_unsafe :: proc() -> Output_Option {
 }
 
 // ForegroundColor returns the terminal's default foreground color.
-foreground_color :: proc(o: ^Output) -> Color {
+output_foreground_color :: proc(o: ^Output) -> Color {
 	f :: proc() {
 		if !is_tty(o) {
 			return 
@@ -146,7 +146,7 @@ foreground_color :: proc(o: ^Output) -> Color {
 }
 
 // BackgroundColor returns the terminal's default background color.
-background_color :: proc(o: ^Output) -> Color {
+output_background_color :: proc(o: ^Output) -> Color {
 	f :: proc() {
 		if !is_tty(o) {
 			return
@@ -165,7 +165,7 @@ background_color :: proc(o: ^Output) -> Color {
 }
 
 // HasDarkBackground returns whether terminal uses a dark-ish background.
-has_dark_background :: proc(o: ^Output) -> bool {
+ output_has_dark_background :: proc(o: ^Output) -> bool {
 	c := convert_to_rgb(background_color(o))
 	_, _, l := c.hsl()
 	return l < 0.5
@@ -173,16 +173,16 @@ has_dark_background :: proc(o: ^Output) -> bool {
 
 // Writer returns the underlying writer. This may be of type io.Writer,
 // io.ReadWriter, or ^os.File.
-writer :: proc(o: Output) -> io.Writer {
+output_writer :: proc(o: Output) -> io.Writer {
 	return o.w
 }
 
-write :: proc(o: Output, r: []rune) -> (int, os.Errno) {
+output_write :: proc(o: Output, r: []rune) -> (int, os.Errno) {
    return 0,0
 	//return write(o.w, r)
 }
 
 // WriteString writes the given string to the output.
-write_string :: proc(o: Output, s: string) -> (int, os.Errno) {
+output_write_string :: proc(o: Output, s: string) -> (int, os.Errno) {
 	return write(o, utf8.string_to_runes(s))
 }

@@ -6,10 +6,7 @@ import "core:strconv"
 import "colorful"
 import "colorful/color"
 
-// Profile is a color profile: Ascii, ANSI, ANSI256, or TrueColor.
-Profile :: int
-
-Color_Profile :: enum {
+Profile :: enum {
 	// TrueColor, 24-bit color profile
 	True_Color,
 	// ANSI256, 8-bit color profile
@@ -29,8 +26,8 @@ profile_string :: proc(p: Profile, s: ..string) -> Style {
 }
 
 // Convert transforms a given Color to a Color supported within the Profile.
-profile_convert :: proc(p: Profile, c: Color) -> Color {
-	using Color_Profile
+profile_convert :: proc(p: Profile, c: ^Color) -> ^Color {
+	using Profile
 	using Errors
 	if p == Ascii do return No_Color{}
 
@@ -58,10 +55,10 @@ profile_convert :: proc(p: Profile, c: Color) -> Color {
 
 // Color creates a Color from a string. Valid inputs are hex colors, as well as
 // ANSI color codes (0-15, 16-255).
-profile_color :: proc(p: Profile, s: string) -> Color {
-	if len(s) == 0 do return Color{}
+profile_color :: proc(p: Profile, s: string) -> ^Color {
+	if len(s) == 0 do return new(Color)
 
-	c: Color
+	c: ^Color
 	if strings.has_prefix(s, "#") {
 		c = new_rgb_color(s)
 	} else {
@@ -81,7 +78,7 @@ profile_color :: proc(p: Profile, s: string) -> Color {
 }
 
 // FromColor creates a Color from a color.Color.
-profile_from_color :: proc(p: Profile, c: color.Color) -> Color {
+profile_from_color :: proc(p: Profile, c: color.Color) -> ^Color {
 	col, _ := colorful.make_color(c)
 	return profile_color(p, colorful.hex(col))
 }

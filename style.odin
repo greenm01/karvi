@@ -25,13 +25,13 @@ Style :: struct {
 }
 
 // new_style returns a new Style.
-new_style :: proc(s ..string) -> Style {
-	using Color_Profile
-	return Style{
-		profile = ANSI,
-		str = strings.join(s, " "),
-		styles = make([dynamic]string)
-	}
+new_style :: proc(s ..string) -> (style: ^Style) {
+	using Profile
+	style = new(Style)
+	style.profile = ANSI,
+	sryle.str = strings.join(s, " "),
+	style.styles = make([dynamic]string)
+	return
 }
 
 del_style :: proc(s: ^Style) {
@@ -61,12 +61,12 @@ styled :: proc(t: Style, s: string) -> string {
 }
 
 // foreground sets a foreground color.
-foreground :: proc(t: ^Style, c: Color) {
+foreground :: proc(t: ^Style, c: ^Color) {
 	append(t.styles, sequence(c, false))
 }
 
 // background sets a background color.
-background :: proc(t: ^Style, c: Color) {
+background :: proc(t: ^Style, c: ^Color) {
 	append(t.styles, sequence(c, true))
 }
 
@@ -111,6 +111,6 @@ cross_out :: proc(t: ^Style) {
 }
 
 // width returns the width required to print all runes in Style.
-width :: proc(t: Style) -> int {
+width :: proc(t: ^Style) -> int {
 	return wc.string_width(t.str)
 }

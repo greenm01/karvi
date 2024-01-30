@@ -6,12 +6,6 @@ import "core:strings"
 
 import "colorful"
 
-Error :: enum {
-	No_Error,
-	Invalid_Color,
-	Err_Status_Report,
-}
-
 // FOREGROUND and BACKGROUND sequence codes
 FOREGROUND :: "38"
 BACKGROUND :: "48"
@@ -29,10 +23,10 @@ No_Color :: struct {
 	using color: ^Color,
 }
 
-new_no_color :: proc() -> No_Color {
+new_no_color :: proc() -> ^Color {
 	color := new(Color)
 	color.type := No_Color{color}
-	return color.type	
+	return color	
 }
 
 no_color_string :: proc(c: No_Color) -> string {
@@ -45,10 +39,10 @@ ANSI_Color :: struct {
 	c: int,
 }
 
-new_ansi_color :: proc(c: int) -> ANSI_Color {
+new_ansi_color :: proc(c: int) -> ^Color {
 	color := new(Color)
 	color.type := ANSI_Color{color, c}
-	return color.type	
+	return color	
 }
 	
 ansi_string :: proc(c: ANSI_Color) -> string {
@@ -61,10 +55,10 @@ ANSI256_Color :: struct {
 	c: int,
 }
 
-new_ansi256_color :: proc(c: int) -> ANSI256_Color {
+new_ansi256_color :: proc(c: int) -> ^Color {
 	color := new(Color)
 	color.type := ANSI256_Color{color, c}
-	return color.type	
+	return color	
 }
 	
 ansi256_string :: proc(c: ANSI256_Color) -> string {
@@ -77,10 +71,10 @@ RGB_Color :: struct {
 	c: string,
 }
 
-new_rgb_color :: proc(c: string) -> RGB_Color {
+new_rgb_color :: proc(c: string) -> ^Color {
 	color := new(Color)
 	color.type := RGB_Color{color, c}
-	return color.type	
+	return color
 }
 
 // ConvertToRGB converts a Color to a colorful.Color.
@@ -99,11 +93,17 @@ convert_to_rbg :: proc(c: Color) -> colorful.Color {
 	return ch
 }
 
-sequence :: proc {
-	no_color_sequence,
-	ansi_sequence,
-	ansi256_sequence,
-	rgb_sequence,
+sequence :: proc(color: ^Color) -> string {
+	switch c in color.type {
+	case No_Color:
+		return no_color_sequence(c)
+	case ANSI_Color:
+		return ansi_sequence(c)
+	case ANSI256_Color:
+		return ansi256_sequence(c)
+	case RGB_Color:
+		return rgb_sequence(c)
+	}
 }
 
 // Sequence returns the ANSI Sequence for the color.
@@ -198,7 +198,7 @@ ansi256_to_ansi :: proc(c: ANSI256_Color) -> ANSI_Color {
 	return new_ansi_color(r)
 }
 
-hex_to_ansi256 :: proc(c: colorful.Color) -> ANSI256_Color {
+hex_to_ansi256 :: proc(c: colorful.Color) -> ^Color {
 	v2ci :: proc(v: f64) -> int {
 		if v < 48 {
 			return 0

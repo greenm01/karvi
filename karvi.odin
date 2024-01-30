@@ -2,14 +2,13 @@ package karvi
 
 import "core:os"
 import "core:fmt"
-/*
-import (
-	"errors"
-	"os"
+import "core:c"
 
-	"github.com/mattn/go-isatty"
-)
-*/
+foreign import libc "system:c"
+
+foreign libc {
+	isatty :: proc(fd: c.int) -> c.int ---
+}
 
 Error :: enum {
 	No_Error,
@@ -30,10 +29,9 @@ ST  :: fmt.tprintf("%v%v", ESC, `\`)
 
 is_tty :: proc(o: ^Output) -> bool {
 	if o.assume_tty || o.unsafe do return true
-	if len(get_env(o.environ, "CI")) > 0 do	return false
-	if f, ok := o.Writer().(*os.File); ok {
-		return true //isatty.IsTerminal(f.Fd())
-	}
+	if len(o.environ.get_env("CI")) > 0 do	return false
+	fd := output_writer(o)
+	if isatty(c.int(fd)) == 1 do return true
 	return false
 }
 
@@ -112,3 +110,4 @@ cli_color_forced :: proc(o: ^Output) -> bool {
 	}
 	return false
 }
+

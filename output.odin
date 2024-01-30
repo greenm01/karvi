@@ -173,16 +173,16 @@ output_background_color :: proc(o: ^Output) -> Color {
 
 // Writer returns the underlying writer. This may be of type io.Writer,
 // io.ReadWriter, or ^os.File.
-output_writer :: proc(o: Output) -> io.Writer {
+output_writer :: proc(o: Output) -> io.Handle {
 	return o.w
 }
 
-output_write :: proc(o: Output, r: []rune) -> (int, os.Errno) {
+output_write :: proc(o: Output, r: []rune) -> (int, Error) {
    return 0,0
 	//return write(o.w, r)
 }
 
 // WriteString writes the given string to the output.
 output_write_string :: proc(o: Output, s: string) -> (int, os.Errno) {
-	return write(o, utf8.string_to_runes(s))
+	return output_write(o, utf8.string_to_runes(s))
 }

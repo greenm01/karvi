@@ -6,15 +6,15 @@ import "core:strings"
 import wc "deps/wcwidth"
 
 // Sequence definitions.
-RESET_SEQ     :: "0"
-BOLD_SEQ      :: "1"
-FAINT_SEQ     :: "2"
-ITALIC_SEQ    :: "3"
-UNDERLINE_SEQ :: "4"
-BLINK_SEQ     :: "5"
-REVERSE_SEQ   :: "7"
-CROSOUT_SEQ   :: "9"
-OVERLINE_SEQ  :: "53"
+RESET_SEQ     : string : "0"
+BOLD_SEQ      : string : "1"
+FAINT_SEQ     : string : "2"
+ITALIC_SEQ    : string : "3"
+UNDERLINE_SEQ : string : "4"
+BLINK_SEQ     : string : "5"
+REVERSE_SEQ   : string : "7"
+CROSOUT_SEQ   : string : "9"
+OVERLINE_SEQ  : string : "53"
 
 
 // Style is a string that various rendering styles can be applied to.
@@ -29,7 +29,7 @@ new_style :: proc(s: ..string) -> (style: ^Style) {
 	using Profile
 	style = new(Style)
 	style.profile = ANSI
-	sryle.str = strings.join(s, " ")
+	style.str = strings.join(s, " ")
 	style.styles = make([dynamic]string)
 	return
 }
@@ -52,12 +52,13 @@ styled :: proc(t: Style, s: string) -> string {
 		return s
 	}
 
-	seq := strings.join(t.styles, ";")
+	seq := strings.join(t.styles[:], ";")
 	if seq == "" {
 		return s
 	}
 
-	return fmt.tprintf("%s%sm%s%sm", CSI, seq, s, CSI+RESET_SEQ)
+	str := strings.concatenate(CSI, RESET_SEQ)
+	return fmt.tprintf("%s%sm%s%sm", CSI, seq, s, str)
 }
 
 // foreground sets a foreground color.

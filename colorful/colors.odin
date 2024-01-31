@@ -3,8 +3,16 @@ package colorful
 import "core:strings"
 import "core:c/libc"
 import "core:math"
+import "core:fmt"
 
 import "color"
+
+when ODIN_OS == .Windows do foreign import cbrt "cbrt.lib"
+when ODIN_OS == .Linux   do foreign import cbrt "cbrt.a"
+
+foreign cbrt {
+	cbrt :: proc(x: f64) -> f64 ---
+}
 
 // A color is stored internally using sRGB (standard RGB) values in the range 0-1
 Color :: struct {
@@ -13,7 +21,7 @@ Color :: struct {
 
 // Constructs a colorful.Color from something implementing color.Color
 make_color :: proc(col: color.Color) -> (Color, bool) {
-	r, g, b, a := color.get_rgba(&col)
+	r, g, b, a := color.get_rgba(col.derived.(color.RGBA))
 	if a == 0 {
 		return Color{0, 0, 0}, false
 	}
@@ -57,6 +65,10 @@ hex :: proc(scol: string) -> (Color, int) {
 	return Color{f64(r) * factor, f64(g) * factor, f64(b) * factor}, 0
 }
 
+sq :: proc(v: f64) -> f64 {
+	return v * v
+}
+
 // clamp01 clamps from 0 to 1.
 clamp01 :: proc(v: f64) -> f64 {
 	return math.max(0.0, math.min(v, 1.0))
@@ -65,7 +77,7 @@ clamp01 :: proc(v: f64) -> f64 {
 // Returns Clamps the color into valid range, clamping each value to [0..1]
 // If the color is valid already, this is a no-op.
 clamped :: proc(c: Color) -> Color {
-	return Color{clamp01(c.R), clamp01(c.G), clamp01(c.B)}
+	return Color{clamp01(c.r), clamp01(c.g), clamp01(c.b)}
 }
 
 luvlch_to_luv :: proc(l, c, h: f64) -> (L, u, v: f64) {
@@ -128,4 +140,94 @@ luv_to_xyz_white_ref :: proc(l, u, v: f64, wref: [3]f64) -> (x, y, z: f64) {
 		x, y = 0.0, 0.0
 	}
 	return
+}
+
+/// Linear ///
+//////////////
+// http://www.sjbrown.co.uk/2004/05/14/gamma-correct-rendering/
+// http://www.brucelindbloom.com/Eqn_RGB_to_XYZ.html
+linearize :: proc(v: f64) -> f64 {
+	if v <= 0.04045 {
+		return v / 12.92
+	}
+	return math.pow((v+0.055)/1.055, 2.4)
+}
+
+// LinearRgb converts the color into the linear RGB space (see http://www.sjbrown.co.uk/2004/05/14/gamma-correct-rendering/).
+color_linear_rgb :: proc(col: Color) -> (r, g, b: f64) {
+	r = linearize(col.r)
+	g = linearize(col.g)
+	b = linearize(col.b)
+	return
+}
+
+linear_rgb_to_xyz :: proc(r, g, b: f64) -> (x, y, z: f64) {
+	x = 0.41239079926595948*r + 0.35758433938387796*g + 0.18048078840183429*b
+	y = 0.21263900587151036*r + 0.71516867876775593*g + 0.072192315360733715*b
+	z = 0.019330818715591851*r + 0.11919477979462599*g + 0.95053215224966058*b
+	return
+}
+
+/// XYZ ///
+///////////
+// http://www.sjbrown.co.uk/2004/05/14/gamma-correct-rendering/
+xyz :: proc(col: Color) -> (x, y, z: f64) {
+	return linear_rgb_to_xyz(color_linear_rgb(col))
+}
+
+// For this part, we do as R's graphics.hcl does, not as wikipedia does.
+// Or is it the same?
+xyz_to_uv :: proc(x, y, z: f64) -> (u, v: f64) {
+	denom := x + 15.0*y + 3.0*z
+	if denom == 0.0 {
+		u, v = 0.0, 0.0
+	} else {
+		u = 4.0 * x / denom
+		v = 9.0 * y / denom
+	}
+	return
+}
+
+/// L*u*v* ///
+//////////////
+// http://en.wikipedia.org/wiki/CIELUV#XYZ_.E2.86.92_CIELUV_and_CIELUV_.E2.86.92_XYZ_conversions
+// For L*u*v*, we need to L*u*v*<->XYZ<->RGB and the first one is device dependent.
+xyz_to_luv_white_ref :: proc(x, y, z: f64, wref: [3]f64) -> (l, u, v: f64) {
+	if y/wref[1] <= 6.0/29.0*6.0/29.0*6.0/29.0 {
+		l = y / wref[1] * (29.0 / 3.0 * 29.0 / 3.0 * 29.0 / 3.0) / 100.0
+	} else {
+		l = 1.16*cbrt(y/wref[1]) - 0.16
+	}
+	ubis, vbis := xyz_to_uv(x, y, z)
+	un, vn := xyz_to_uv(wref[0], wref[1], wref[2])
+	u = 13.0 * l * (ubis - un)
+	v = 13.0 * l * (vbis - vn)
+	return
+}
+
+luv_to_luvlch :: proc(L, u, v: f64) -> (l, c, h: f64) {
+	// Oops, floating point workaround necessary if u ~= v and both are very small (i.e. almost zero).
+	if math.abs(v-u) > 1e-4 && math.abs(u) > 1e-4 {
+		h = math.mod(57.29577951308232087721*math.atan2(v, u)+360.0, 360.0) // Rad2Deg
+	} else {
+		h = 0.0
+	}
+	l = L
+	c = math.sqrt(sq(u) + sq(v))
+	return
+}
+
+// Converts the given color to CIE L*u*v* space, taking into account
+// a given reference white. (i.e. the monitor's white)
+// L* is in [0..1] and both u* and v* are in about [-1..1]
+luv_white_ref :: proc(col: Color, wref: [3]f64) -> (l, u, v: f64) {
+	x, y, z := xyz(col)
+	return xyz_to_luv_white_ref(x, y, z, wref)
+}
+
+// Converts the given color to LuvLCh space, taking into account
+// a given reference white. (i.e. the monitor's white)
+// h values are in [0..360], c and l values are in [0..1]
+luvlch_white_ref :: proc(col: Color, wref: [3]f64) -> (l, c, h: f64) {
+	return luv_to_luvlch(luv_white_ref(col, wref))
 }

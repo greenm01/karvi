@@ -79,7 +79,8 @@ new_rgb_color :: proc(c: string) -> ^Color {
 }
 
 // ConvertToRGB converts a Color to a colorful.Color.
-convert_to_rbg :: proc(c: ^Color) -> colorful.Color {
+convert_to_rgb :: proc(c: ^Color) -> colorful.Color {
+	using Profile
 	hex: string
 	switch v in c.type {
 	case RGB_Color:
@@ -88,23 +89,27 @@ convert_to_rbg :: proc(c: ^Color) -> colorful.Color {
 		hex = ansi_hex[v.c]
 	case ANSI256_Color:
 		hex = ansi_hex[v.c]
+	case No_Color:
+		hex = ""
 	}
 
 	ch, _ := colorful.hex(hex)
 	return ch
 }
 
-sequence :: proc(color: ^Color) -> string {
+sequence :: proc(color: ^Color, bg: bool) -> string {
+	using Profile
 	switch c in color.type {
 	case No_Color:
 		return no_color_sequence()
 	case ANSI_Color:
-		return ansi_sequence(c)
+		return ansi_sequence(c, bg)
 	case ANSI256_Color:
-		return ansi256_sequence(c)
+		return ansi256_sequence(c, bg)
 	case RGB_Color:
-		return rgb_sequence(c)
+		return rgb_sequence(c, bg)
 	}
+	return ""
 }
 
 // Sequence returns the ANSI Sequence for the color.
@@ -115,7 +120,7 @@ no_color_sequence :: proc() -> string {
 // Sequence returns the ANSI Sequence for the color.
 ansi_sequence :: proc(c: ^Color, bg: bool) -> string {
 	col := c.type.(ANSI_Color).c
-	bgMod :: proc(c: int, bg: bool) -> int {
+	bg_mod :: proc(c: int, bg: bool) -> int {
 		if bg {
 			return c + 10
 		}
@@ -139,7 +144,7 @@ ansi256_sequence :: proc(c: ^Color, bg: bool) -> string {
 
 // Sequence returns the ANSI Sequence for the color.
 rgb_sequence :: proc(c: ^Color, bg: bool) -> string {
-	f, err := colorful.hex(c.type.(RRB_Color).c)
+	f, err := colorful.hex(c.type.(RGB_Color).c)
 	if err != 0 {
 		return ""
 	}
@@ -160,26 +165,27 @@ xterm_color :: proc(s: string) -> (^Color, Error) {
 	bel := utf8.runes_to_string([]rune{BEL})
 	esc := utf8.runes_to_string([]rune{ESC})
 
+	str := s
 	switch {
-	case strings.has_suffix(s, bel):
-		s = strings.trim_suffix(s, bel)
-	case strings.has_suffix(s, esc):
-		s = strings.trim_suffix(s, esc)
-	case strings.has_suffix(s, ST):
-		s = strings.trim_suffix(s, ST)
+	case strings.has_suffix(str, bel):
+		str = strings.trim_suffix(str, bel)
+	case strings.has_suffix(str, esc):
+		str = strings.trim_suffix(str, esc)
+	case strings.has_suffix(str, ST):
+		str = strings.trim_suffix(str, ST)
 	case:
 		return new_rgb_color(""), Invalid_Color
 	}
 
-	s = s[4:]
+	str = str[4:]
 
 	prefix := ";rgb:"
 	if !strings.has_prefix(s, prefix) {
 		return new_rgb_color(""), Invalid_Color
 	}
-	s = strings.trim_prefix(s, prefix)
+	str = strings.trim_prefix(s, prefix)
 
-	h := strings.split(s, "/")
+	h := strings.split(str, "/")
 	hex := fmt.tprintf("#%s%s%s", h[0][:2], h[1][:2], h[2][:2])
 	return new_rgb_color(hex), No_Error
 }

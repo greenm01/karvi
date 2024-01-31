@@ -13,6 +13,21 @@ m := [3][3]f64{
 KAPPA :: 903.2962962962963
 EPSILON :: 0.0088564516790356308
 
+luvlch_to_hsluv :: proc(l, c, h: f64) -> (f64, f64, f64) {
+	// [-1..1] but the code expects it to be [-100..100]
+	cc := c * 100.0
+	ll := l * 100.0
+
+	s := math.F64_MAX
+	if ll > 99.9999999 || ll < 0.00000001 {
+		s = 0.0
+	} else {
+		max = max_chroma_for_lh(ll, h)
+		s = cc / max * 100.0
+	}
+	return h, clamp01(s / 100.0), clamp01(ll / 100.0)
+}
+
 max_chroma_for_lh :: proc(l, h: f64) -> f64 {
 	h_rad := h / 360.0 * math.PI * 2.0
 	min_length := math.F64_MAX
@@ -34,7 +49,7 @@ get_bounds :: proc(l: f64) -> [6][2]f64 {
 	} else {
 		sub2 = l / KAPPA
 	}
-	for i in m {
+	for _, i in m {
 		for k := 0; k < 2; k += 1 {
 			top1 := (284517.0*m[i][0] - 94839.0*m[i][2]) * sub2
 			top2 := (838422.0*m[i][2]+769860.0*m[i][1]+731718.0*m[i][0])*l*sub2 - 769860.0*f64(k)*l
@@ -52,19 +67,19 @@ length_of_ray_until_intersect :: proc(theta, x, y: f64) -> (length: f64) {
 }
 
 hsluv_to_luvlch :: proc(h, s, l: f64) -> (f64, f64, f64) {
-	l *= 100.0
-	s *= 100.0
+	ll := l * 100.0
+	ss := s * 100.0
 
 	c, max: f64
-	if l > 99.9999999 || l < 0.00000001 {
+	if ll > 99.9999999 || ll < 0.00000001 {
 		c = 0.0
 	} else {
-		max = max_chroma_for_lh(l, h)
-		c = max / 100.0 * s
+		max = max_chroma_for_lh(ll, h)
+		c = max / 100.0 * ss
 	}
 
 	// c is [-100..100], but for LCh it's supposed to be almost [-1..1]
-	return clamp01(l / 100.0), c / 100.0, h
+	return clamp01(ll / 100.0), c / 100.0, h
 }
 
 
@@ -76,14 +91,22 @@ hsluv_to_luvlch :: proc(h, s, l: f64) -> (f64, f64, f64) {
 hsluv :: proc(h, s, l: f64) -> Color {
 	// HSLuv -> LuvLCh -> CIELUV -> CIEXYZ -> Linear RGB -> sRGB
 	l, u, v := luvlch_to_luv(hsluv_to_luvlch(h, s, l))
-	return clamped(linear_rgb(xyz_to_linear_rgb(luv_to_xyz_white_ref(l, u, v, hSluv_d65))))
+	return clamped(linear_rgb(xyz_to_linear_rgb(luv_to_xyz_white_ref(l, u, v, hsluv_d65))))
+}
+
+// HSLuv returns the Hue, Saturation and Luminance of the color in the HSLuv
+// color space. Hue in [0..360], a Saturation [0..1], and a Luminance
+// (lightness) in [0..1].
+color_hsluv :: proc(col: Color) -> (h, s, l: f64) {
+	// sRGB -> Linear RGB -> CIEXYZ -> CIELUV -> LuvLCh -> HSLuv
+	return luvlch_to_hsluv(luvlch_white_ref(col, hsLuv_d65))
 }
 
 // DistanceHSLuv calculates Euclidan distance in the HSLuv colorspace. 
 // The Hue value is divided by 100 before the calculation, so that H, S, and L
 // have the same relative ranges.
 distance_hsluv :: proc(c1: Color, c2: Color) -> f64 {
-	h1, s1, l1 := hsluv(c1)
-	h2, s2, l2 := hsluv(c2)
+	h1, s1, l1 := color_hsluv(c1)
+	h2, s2, l2 := color_hsluv(c2)
 	return math.sqrt(sq((h1-h2)/100.0) + sq(s1-s2) + sq(l1-l2))
 }

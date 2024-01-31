@@ -2,9 +2,10 @@ package karvi
 
 import "core:io"
 import "core:os"
-import "core:c/libc"
 import "core:sync"
 import "core:unicode/utf8"
+
+import sys "syscalls"
 
 // output is the default global output.
 output := new_output(os.stdout)
@@ -34,16 +35,15 @@ Environ :: struct {
 }
 
 new_environ :: proc() -> Environ {
-   return Environ{environ, get_env}
+	return Environ{environ, get_env}
 }
 
 environ :: proc() -> []string {
-	return os.environ()
+	return sys.get_env_slice2()
 }
 
 getenv :: proc(key: string) -> string {
-	env := libc.getenv(cast(cstring) key)
-	return cast(string) env
+	return sys.get_env(key)
 }
 
 // DefaultOutput returns the default global output.
@@ -69,7 +69,7 @@ new_output :: proc(w: os.Handle, opts: ..Output_Option) -> ^Output {
 	for opt in opts {
 		opt(o)
 	}
-	if o.profile < 0 {
+	if o.profile == Undefined {
 		o.profile = output_env_color_profile(o)
 	}
 
@@ -170,16 +170,16 @@ output_background_color :: proc(o: ^Output) -> ^Color {
 
 // Writer returns the underlying writer. This may be of type io.Writer,
 // io.ReadWriter, or ^os.File.
-output_writer :: proc(o: Output) -> os.Handle {
+output_writer :: proc(o: ^Output) -> os.Handle {
 	return o.w
 }
 
-output_write :: proc(o: Output, r: []rune) -> (int, Error) {
+output_write :: proc(o: ^Output, r: []rune) -> (int, Error) {
    return 0,0
 	//return write(o.w, r)
 }
 
 // WriteString writes the given string to the output.
-output_write_string :: proc(o: Output, s: string) -> (int, os.Errno) {
+output_write_string :: proc(o: ^Output, s: string) -> (int, os.Errno) {
 	return output_write(o, utf8.string_to_runes(s))
 }

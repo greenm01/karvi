@@ -3,6 +3,7 @@ package karvi
 import "core:time"
 import "core:io"
 import "core:fmt"
+import "core:strings"
 
 // Linux, Darwin FreeBSD, OpenBSD 
 when ODIN_OS != .Windows {
@@ -32,12 +33,12 @@ output_color_profile :: proc(o: ^Output) -> Profile {
 		return Ascii
 	}
 
-	if get_env(o.environ, "GOOGLE_CLOUD_SHELL") == "true" {
+	if getenv("GOOGLE_CLOUD_SHELL") == "true" {
 		return True_Color
 	}
 
-	term := get_env(o.environ, "TERM")
-	color_term := get_env(o.environ, "COLORTERM")
+	term := getenv("TERM")
+	color_term := getenv("COLORTERM")
 
 	switch strings.to_lower(color_term) {
 	case "24bit":
@@ -45,7 +46,7 @@ output_color_profile :: proc(o: ^Output) -> Profile {
 	case "truecolor":
 		if strings.HasPrefix(term, "screen") {
 			// tmux supports TrueColor, screen only ANSI256
-			if get_env(o.environ, "TERM_PROGRAM") != "tmux" {
+			if getenv("TERM_PROGRAM") != "tmux" {
 				return ANSI256
 			}
 		}

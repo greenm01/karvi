@@ -3,6 +3,7 @@ package karvi
 import "core:os"
 import "core:c"
 import "core:unicode/utf8"
+import "core:strings"
 
 foreign import libc "system:c"
 
@@ -42,12 +43,12 @@ color_profile :: proc() -> Profile {
 }
 
 // ForegroundColor returns the terminal's default foreground color.
-foreground_color :: proc() -> Color {
+foreground_color :: proc() -> ^Color {
 	return output_foreground_color(output)
 }
 
 // BackgroundColor returns the terminal's default background color.
-background_color :: proc() -> Color {
+background_color :: proc() -> ^Color {
 	return output_background_color(output)
 }
 
@@ -62,7 +63,7 @@ has_dark_background :: proc() -> bool {
 // If NO_COLOR is set, this will return true, ignoring CLICOLOR/CLICOLOR_FORCE
 // If CLICOLOR=="0", it will be true only if CLICOLOR_FORCE is also "0" or is unset.
 output_env_no_color :: proc(o: ^Output) -> bool {
-	return get_env(o.environ, "NO_COLOR") != "" || (get_env(o.environ, "CLICOLOR") == "0" && !cli_color_forced(o))
+	return getenv("NO_COLOR") != "" || (getenv("CLICOLOR") == "0" && !cli_color_forced(o))
 }
 
 // env_no_color returns true if the environment variables explicitly disable color output
@@ -105,7 +106,7 @@ output_env_color_profile :: proc(o: ^Output) -> Profile {
 }
 
 cli_color_forced :: proc(o: ^Output) -> bool {
-	if forced := get_env(o.environ, "CLICOLOR_FORCE"); forced != "" {
+	if forced := getenv("CLICOLOR_FORCE"); forced != "" {
 		return forced != "0"
 	}
 	return false

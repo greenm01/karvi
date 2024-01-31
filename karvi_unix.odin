@@ -1,12 +1,12 @@
 package karvi
 
-/*
-// Linux, Darwin FreeBSD, OpenBSD 
-when ODIN_OS != .Windows {
-
 import "core:time"
 import "core:io"
 import "core:fmt"
+
+// Linux, Darwin FreeBSD, OpenBSD 
+when ODIN_OS != .Windows {
+
 
 /*
 import (
@@ -20,16 +20,14 @@ import (
 )
 */
 
-/*
+
 // timeout for OSC queries
 OSC_TIMEOUT :: 5 * time.Second
 
-using Error
-using Color
-
 // ColorProfile returns the supported color profile:
 // Ascii, ANSI, ANSI256, or TrueColor.
-color_profile :: proc(o: ^Output) -> Profile {
+output_color_profile :: proc(o: ^Output) -> Profile {
+	using Profile
 	if is_tty(o) {
 		return Ascii
 	}
@@ -53,7 +51,7 @@ color_profile :: proc(o: ^Output) -> Profile {
 		}
 		return True_Color
 	case "yes":
-		continue
+		fallthrough
 	case "true":
 		return ANSI256
 	}
@@ -78,10 +76,12 @@ color_profile :: proc(o: ^Output) -> Profile {
 	return Ascii
 }
 
-foreground_color :: proc(o: Output) -> Color {
+/*
+output_foreground_color :: proc(o: Output) -> Color {
+	using Error
 	s, err := term_status_report(o, 10)
 	if err == No_Error {
-		c, err := X_Term_Color(s)
+		c, err := x_term_color(s)
 		if err == No_Error {
 			return c
 		}
@@ -100,7 +100,7 @@ foreground_color :: proc(o: Output) -> Color {
 	return ANSI_Color(7)
 }
 
-background_color :: proc(o: Output) -> Color {
+output_background_color :: proc(o: Output) -> Color {
 	s, err := term_status_report(o, 11)
 	if err == nil {
 		c, err := xTermColor(s)
@@ -122,7 +122,7 @@ background_color :: proc(o: Output) -> Color {
 	return ANSIColor(0)
 }
 
-o ^Output) waitForData :: proc(o: ^Output, timeout: time.Duration) -> error {
+waitForData :: proc(o: ^Output, timeout: time.Duration) -> error {
 	fd := o.TTY().Fd()
 	tv := unix.NsecToTimeval(int64(timeout))
 	var readfds unix.FdSet
@@ -146,7 +146,7 @@ o ^Output) waitForData :: proc(o: ^Output, timeout: time.Duration) -> error {
 	return nil
 }
 
-o ^Output) readNextByte :: proc(o: ^Output) -> (byte, error) {
+readNextByte :: proc(o: ^Output) -> (byte, error) {
 	if !o.unsafe {
 		if err := o.waitForData(OSC_TIMEOUT); err != nil {
 			return 0, err
@@ -169,7 +169,7 @@ o ^Output) readNextByte :: proc(o: ^Output) -> (byte, error) {
 // readNextResponse reads either an OSC response or a cursor position response:
 //   - OSC response: "\x1b]11;rgb:1111/1111/1111\x1b\\"
 //   - cursor position response: "\x1b[42;1R"
-o ^Output) readNextResponse :: proc(o: ^Output) -> (response string, isOSC bool, err error) {
+readNextResponse :: proc(o: ^Output) -> (response string, isOSC bool, err error) {
 	start, err := o.readNextByte()
 	if err != nil {
 		return "", false, err
@@ -232,7 +232,7 @@ o ^Output) readNextResponse :: proc(o: ^Output) -> (response string, isOSC bool,
 	return "", false, Err_Status_Report
 }
 
-o Output) term_status_report :: proc(o: Output, sequence: int) -> (string, Error) {
+term_status_report :: proc(o: Output, sequence: int) -> (string, Error) {
 	// screen/tmux can't support OSC, because they can be connected to multiple
 	// terminals concurrently.
 	term := get_env(o.environ, "TERM")
@@ -300,6 +300,7 @@ o Output) term_status_report :: proc(o: Output, sequence: int) -> (string, Error
 enable_virtual_terminal_processing :: proc(_: io.Writer) -> (proc() -> Error, Error) {
 	return proc() -> error { return No_Error }, No_Error
 }
-  
-}
+
 */
+}
+

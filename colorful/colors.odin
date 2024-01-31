@@ -30,9 +30,14 @@ make_color :: proc(col: color.Color) -> (Color, bool) {
 	return Color{f64(r) / 65535.0, f64(g) / 65535.0, f64(b) / 65535.0}, true
 }
 
-// Hex parses a "html" hex color-string, either in the 3 "#f0c" or 6 "#ff1034" digits form.
-hex :: proc(scol: string) -> (Color, karvi.Error) {
-	using karvi.Error
+// color_hex returns the hex "html" representation of the color, as in #ff0080.
+color_hex :: proc(col: Color) -> string {
+	// Add 0.5 for rounding
+	return fmt.tprintf("#%02x%02x%02x", u8(col.r*255.0+0.5), u8(col.g*255.0+0.5), u8(col.b*255.0+0.5))
+}
+
+// hex parses a "html" hex color-string, either in the 3 "#f0c" or 6 "#ff1034" digits form.
+hex :: proc(scol: string) -> (Color, int) {
 	format := "#%02x%02x%02x"
 	factor := 1.0 / 255.0
 	if len(scol) == 4 {
@@ -46,10 +51,10 @@ hex :: proc(scol: string) -> (Color, karvi.Error) {
 	n := libc.sscanf(s, f, &r, &g, &b)
 	//n, err := fmt.Sscanf(scol, format, &r, &g, &b)
 	if n != 3 {
-		return Color{}, Invalid_Color
+		return Color{}, 1
 	}
 
-	return Color{f64(r) * factor, f64(g) * factor, f64(b) * factor}, No_Error
+	return Color{f64(r) * factor, f64(g) * factor, f64(b) * factor}, 0
 }
 
 // clamp01 clamps from 0 to 1.

@@ -3,6 +3,7 @@ package karvi
 import "core:fmt"
 import "core:math"
 import "core:strings"
+import "core:unicode/utf8"
 
 import "colorful"
 
@@ -25,7 +26,7 @@ No_Color :: struct {
 
 new_no_color :: proc() -> ^Color {
 	color := new(Color)
-	color.type := No_Color{color}
+	color.type = No_Color{color}
 	return color	
 }
 
@@ -41,12 +42,12 @@ ANSI_Color :: struct {
 
 new_ansi_color :: proc(c: int) -> ^Color {
 	color := new(Color)
-	color.type := ANSI_Color{color, c}
+	color.type = ANSI_Color{color, c}
 	return color	
 }
 	
-ansi_string :: proc(c: ANSI_Color) -> string {
-	return ANSI_HEX[c.c]
+ansi_string :: proc(c: ANSI_Color) -> (str: string) {
+	return ansi_hex[c.c]
 }
 
 // ANSI256_Color is a color (16-255) as defined by the ANSI Standard.
@@ -57,12 +58,12 @@ ANSI256_Color :: struct {
 
 new_ansi256_color :: proc(c: int) -> ^Color {
 	color := new(Color)
-	color.type := ANSI256_Color{color, c}
+	color.type = ANSI256_Color{color, c}
 	return color	
 }
 	
-ansi256_string :: proc(c: ANSI256_Color) -> string {
-	return ANSI_HEX[c.c]
+ansi256_string :: proc(c: ANSI256_Color) -> (str: string) {
+	return ansi_hex[c.c]
 }
 
 // RGB is a hex-encoded color, e.g. "#abcdef".
@@ -73,20 +74,20 @@ RGB_Color :: struct {
 
 new_rgb_color :: proc(c: string) -> ^Color {
 	color := new(Color)
-	color.type := RGB_Color{color, c}
+	color.type = RGB_Color{color, c}
 	return color
 }
 
 // ConvertToRGB converts a Color to a colorful.Color.
-convert_to_rbg :: proc(c: Color) -> colorful.Color {
+convert_to_rbg :: proc(c: ^Color) -> colorful.Color {
 	hex: string
 	switch v in c.type {
 	case RGB_Color:
 		hex = v.c
 	case ANSI_Color:
-		hex = ANSI_HEX[v.c]
+		hex = ansi_hex[v.c]
 	case ANSI256_Color:
-		hex = ANSI_HEX[v.c]
+		hex = ansi_hex[v.c]
 	}
 
 	ch, _ := colorful.hex(hex)
@@ -96,7 +97,7 @@ convert_to_rbg :: proc(c: Color) -> colorful.Color {
 sequence :: proc(color: ^Color) -> string {
 	switch c in color.type {
 	case No_Color:
-		return no_color_sequence(c)
+		return no_color_sequence()
 	case ANSI_Color:
 		return ansi_sequence(c)
 	case ANSI256_Color:
@@ -107,14 +108,14 @@ sequence :: proc(color: ^Color) -> string {
 }
 
 // Sequence returns the ANSI Sequence for the color.
-no_color_sequence :: proc(_: bool) -> string {
+no_color_sequence :: proc() -> string {
 	return ""
 }
 
 // Sequence returns the ANSI Sequence for the color.
-ansi_sequence :: proc(c: ANSI_Color, bg: bool) -> string {
-	col := c.c
-	bgMod :: proc(c: int) -> int {
+ansi_sequence :: proc(c: ^Color, bg: bool) -> string {
+	col := c.type.(ANSI_Color).c
+	bgMod :: proc(c: int, bg: bool) -> int {
 		if bg {
 			return c + 10
 		}
@@ -122,23 +123,23 @@ ansi_sequence :: proc(c: ANSI_Color, bg: bool) -> string {
 	}
 
 	if col < 8 {
-		return fmt.tprintf("%d", bg_mod(col)+30)
+		return fmt.tprintf("%d", bg_mod(col, bg)+30)
 	}
-	return fmt.tprintf("%d", bg_mod(col-8)+90)
+	return fmt.tprintf("%d", bg_mod(col-8, bg)+90)
 }
 
 // Sequence returns the ANSI_Color Sequence for the color.
-ansi256_sequence :: proc(c: ANSI256_Color, bg: bool) -> string {
+ansi256_sequence :: proc(c: ^Color, bg: bool) -> string {
 	prefix := FOREGROUND
 	if bg {
 		prefix = BACKGROUND
 	}
-	return fmt.tprintf("%s;5;%d", prefix, c.c)
+	return fmt.tprintf("%s;5;%d", prefix, c.type.(ANSI256_Color).c)
 }
 
 // Sequence returns the ANSI Sequence for the color.
-rgb_sequence :: proc(c: RGB_Color, bg: bool) -> string {
-	f, err := colorful.hex(c.c)
+rgb_sequence :: proc(c: ^Color, bg: bool) -> string {
+	f, err := colorful.hex(c.type.(RRB_Color).c)
 	if err != 0 {
 		return ""
 	}
@@ -150,17 +151,20 @@ rgb_sequence :: proc(c: RGB_Color, bg: bool) -> string {
 	return fmt.tprintf("%s;2;%d;%d;%d", prefix, u8(f.r*255), u8(f.g*255), u8(f.b*255))
 }
 
-xterm_color :: proc(s: string) -> (RGB_Color, Error) {
+xterm_color :: proc(s: string) -> (^Color, Error) {
 	using Error
 	if len(s) < 24 || len(s) > 25 {
 		return new_rgb_color(""), Invalid_Color
 	}
 
+	bel := utf8.runes_to_string([]rune{BEL})
+	esc := utf8.runes_to_string([]rune{ESC})
+
 	switch {
-	case strings.has_suffix(s, string(BEL)):
-		s = strings.trim_suffix(s, string(BEL))
-	case strings.has_suffix(s, string(ESC)):
-		s = strings.trim_suffix(s, string(ESC))
+	case strings.has_suffix(s, bel):
+		s = strings.trim_suffix(s, bel)
+	case strings.has_suffix(s, esc):
+		s = strings.trim_suffix(s, esc)
 	case strings.has_suffix(s, ST):
 		s = strings.trim_suffix(s, ST)
 	case:
@@ -180,13 +184,13 @@ xterm_color :: proc(s: string) -> (RGB_Color, Error) {
 	return new_rgb_color(hex), No_Error
 }
 
-ansi256_to_ansi :: proc(c: ANSI256_Color) -> ANSI_Color {
+ansi256_to_ansi :: proc(c: ANSI256_Color) -> ^Color {
 	r: int
 	md := math.F64_MAX
 
-	h, _ := colorful.hex(ANSI_HEX[c.c])
+	h, _ := colorful.hex(ansi_hex[c.c])
 	for i := 0; i <= 15; i += 1 {
-		hb, _ := colorful.hex(ANSI_HEX[i])
+		hb, _ := colorful.hex(ansi_hex[c.c])
 		d := colorful.distance_hsluv(h, hb)
 
 		if d < md {
@@ -210,9 +214,9 @@ hex_to_ansi256 :: proc(c: colorful.Color) -> ^Color {
 	}
 
 	// Calculate the nearest 0-based color index at 16..231
-	r := v2ci(c.R * 255.0) // 0..5 each
-	g := v2ci(c.G * 255.0)
-	b := v2ci(c.B * 255.0)
+	r := v2ci(c.r * 255.0) // 0..5 each
+	g := v2ci(c.g * 255.0)
+	b := v2ci(c.b * 255.0)
 	ci := 36*r + 6*g + b /* 0..215 */
 
 	// Calculate the represented colors back from the index

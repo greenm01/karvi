@@ -20,16 +20,16 @@ OVERLINE_SEQ  :: "53"
 // Style is a string that various rendering styles can be applied to.
 Style :: struct {
 	profile: Profile,
-	str    : string
+	str    : string,
 	styles : [dynamic]string,
 }
 
 // new_style returns a new Style.
-new_style :: proc(s ..string) -> (style: ^Style) {
+new_style :: proc(s: ..string) -> (style: ^Style) {
 	using Profile
 	style = new(Style)
-	style.profile = ANSI,
-	sryle.str = strings.join(s, " "),
+	style.profile = ANSI
+	sryle.str = strings.join(s, " ")
 	style.styles = make([dynamic]string)
 	return
 }
@@ -44,7 +44,7 @@ string_style :: proc(t: Style) -> string {
 
 // styled renders s with all applied styles.
 styled :: proc(t: Style, s: string) -> string {
-	using Color_Profile
+	using Profile
 	if t.profile == Ascii {
 		return s
 	}

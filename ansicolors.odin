@@ -21,7 +21,7 @@ ANSI_Color_Codes :: enum {
 }
 
 // RGB values of ANSI colors (0-255).
-ANSI_HEX :: []string{
+ansi_hex := []string{
 	"#000000",
 	"#800000",
 	"#008000",

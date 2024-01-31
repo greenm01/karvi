@@ -2,6 +2,7 @@ package karvi
 
 import "core:io"
 import "core:os"
+import "core:c/libc"
 import "core:sync"
 import "core:unicode/utf8"
 
@@ -20,16 +21,16 @@ Output :: struct {
 	assume_tty: bool,
 	unsafe:     bool,
 	cache:      bool,
-	fg_sync:    ^sync.Once,
-	fg_color:   Color,
-	bg_sync:    ^sync.Once,
-	bg_color:   Color,
+	fg_sync:    sync.Once,
+	fg_color:   ^Color,
+	bg_sync:    sync.Once,
+	bg_color:   ^Color,
 }
 
 // Environ is an interface for getting environment variables.
 Environ :: struct {
 	environ: proc() -> []string,
-	get_env: proc() -> string,
+	get_env: proc(string) -> string,
 }
 
 new_environ :: proc() -> Environ {
@@ -40,8 +41,9 @@ environ :: proc() -> []string {
 	return os.environ()
 }
 
-get_env :: proc(key: string) -> string {
-	return os.get_env(key)
+getenv :: proc(key: string) -> string {
+	env := libc.getenv(cast(cstring) key)
+	return cast(string) env
 }
 
 // DefaultOutput returns the default global output.
@@ -56,27 +58,22 @@ set_default_output :: proc(o: ^Output) {
 
 // new_output returns a new Output for the given writer.
 new_output :: proc(w: os.Handle, opts: ..Output_Option) -> ^Output {
-	o := Output{
-		w        = w,
-		environ  = new_environ(),
-		profile  = -1,
-		fg_sync  = new(sync.Once),
-		fg_color = No_Color{},
-		bg_sync  = new(sync.Once),
-		bg_color = No_Color{},
-	}
+	using Profile
+	o := new(Output)
+	o.w        = w
+	o.environ  = new_environ()
+	o.profile  = Undefined      
+	o.fg_color = new_no_color()
+	o.bg_color = new_no_color()
 
-	if o.w == nil {
-		o.w = os.stdout
-	}
 	for opt in opts {
 		opt(o)
 	}
 	if o.profile < 0 {
-		o.profile = o.EnvColorProfile()
+		o.profile = output_env_color_profile(o)
 	}
 
-	return &o
+	return o
 }
 
 // WithEnvironment returns a new Output_Option for the given environment.
@@ -127,8 +124,8 @@ with_unsafe :: proc() -> Output_Option {
 }
 
 // ForegroundColor returns the terminal's default foreground color.
-output_foreground_color :: proc(o: ^Output) -> Color {
-	f :: proc() {
+output_foreground_color :: proc(o: ^Output) -> ^Color {
+	f :: proc(o: ^Output) {
 		if !is_tty(o) {
 			return 
 		}
@@ -137,17 +134,17 @@ output_foreground_color :: proc(o: ^Output) -> Color {
 	}
 
    if o.cache {
-      sync.once_do(o.fg_sync, f)	
+      sync.once_do(o.fg_sync, f, o)	
    } else {
-      f()
+      f(o)
    }
 
    return o.fg_color
 }
 
 // BackgroundColor returns the terminal's default background color.
-output_background_color :: proc(o: ^Output) -> Color {
-	f :: proc() {
+output_background_color :: proc(o: ^Output) -> ^Color {
+	f :: proc(o: ^Output) {
 		if !is_tty(o) {
 			return
 		}
@@ -156,9 +153,9 @@ output_background_color :: proc(o: ^Output) -> Color {
 	}
 
 	if o.cache {
-		sync.once_do(o.bg_sync, f)
+		sync.once_do(o.bg_sync, f, o)
 	} else {
-		f()
+		f(o)
 	}
 
 	return o.bg_color
@@ -166,14 +163,14 @@ output_background_color :: proc(o: ^Output) -> Color {
 
 // HasDarkBackground returns whether terminal uses a dark-ish background.
  output_has_dark_background :: proc(o: ^Output) -> bool {
-	c := convert_to_rgb(background_color(o))
+	c := convert_to_rgb(output_background_color(o))
 	_, _, l := c.hsl()
 	return l < 0.5
 }
 
 // Writer returns the underlying writer. This may be of type io.Writer,
 // io.ReadWriter, or ^os.File.
-output_writer :: proc(o: Output) -> io.Handle {
+output_writer :: proc(o: Output) -> os.Handle {
 	return o.w
 }
 

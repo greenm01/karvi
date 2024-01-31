@@ -7,6 +7,7 @@ import "colorful"
 import "colorful/color"
 
 Profile :: enum {
+	Undefined,
 	// TrueColor, 24-bit color profile
 	True_Color,
 	// ANSI256, 8-bit color profile
@@ -21,14 +22,14 @@ Profile :: enum {
 profile_string :: proc(p: Profile, s: ..string) -> Style {
 	return Style{
 		profile = p,
-		string = strings.join(s, " "),
+		str = strings.join(s, " "),
 	}
 }
 
 // Convert transforms a given Color to a Color supported within the Profile.
 profile_convert :: proc(p: Profile, c: ^Color) -> ^Color {
 	using Profile
-	using Errors
+	using Error
 	if p == Ascii do return No_Color{}
 
 	switch v in c.type {
@@ -41,7 +42,7 @@ profile_convert :: proc(p: Profile, c: ^Color) -> ^Color {
 
 	case RGB_Color:
 		h, err := colorful.hex(string(v))
-		if err != No_Error do return Color{}
+		if err != No_Error do return nil
 		if p != True_Color {
 			ac := hex_to_ansi256(h)
 			if p == ANSI do	return ansi256_to_ansi(ac)
@@ -62,11 +63,7 @@ profile_color :: proc(p: Profile, s: string) -> ^Color {
 	if strings.has_prefix(s, "#") {
 		c = new_rgb_color(s)
 	} else {
-		i, err := strconv.atoi(s)
-		if err != nil {
-			return nil
-		}
-
+		i := strconv.atoi(s)
 		if i < 16 {
 			c = new_ansi_color(i)
 		} else {
@@ -80,5 +77,5 @@ profile_color :: proc(p: Profile, s: string) -> ^Color {
 // FromColor creates a Color from a color.Color.
 profile_from_color :: proc(p: Profile, c: color.Color) -> ^Color {
 	col, _ := colorful.make_color(c)
-	return profile_color(p, colorful.hex(col))
+	return profile_color(p, colorful.color_hex(col))
 }

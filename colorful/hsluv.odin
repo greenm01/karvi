@@ -22,7 +22,7 @@ luvlch_to_hsluv :: proc(l, c, h: f64) -> (f64, f64, f64) {
 	if ll > 99.9999999 || ll < 0.00000001 {
 		s = 0.0
 	} else {
-		max = max_chroma_for_lh(ll, h)
+		max := max_chroma_for_lh(ll, h)
 		s = cc / max * 100.0
 	}
 	return h, clamp01(s / 100.0), clamp01(ll / 100.0)
@@ -99,7 +99,7 @@ hsluv :: proc(h, s, l: f64) -> Color {
 // (lightness) in [0..1].
 color_hsluv :: proc(col: Color) -> (h, s, l: f64) {
 	// sRGB -> Linear RGB -> CIEXYZ -> CIELUV -> LuvLCh -> HSLuv
-	return luvlch_to_hsluv(luvlch_white_ref(col, hsLuv_d65))
+	return luvlch_to_hsluv(luvlch_white_ref(col, hsluv_d65))
 }
 
 // DistanceHSLuv calculates Euclidan distance in the HSLuv colorspace. 

@@ -4,23 +4,10 @@ import "core:time"
 import "core:io"
 import "core:fmt"
 import "core:strings"
+import "core:strconv"
 
 // Linux, Darwin FreeBSD, OpenBSD 
 when ODIN_OS != .Windows {
-
-
-/*
-import (
-	"fmt"
-	"io"
-	"strconv"
-	"strings"
-	"time"
-
-	"golang.org/x/sys/unix"
-)
-*/
-
 
 // timeout for OSC queries
 OSC_TIMEOUT :: 5 * time.Second
@@ -44,7 +31,7 @@ output_color_profile :: proc(o: ^Output) -> Profile {
 	case "24bit":
 		fallthrough
 	case "truecolor":
-		if strings.HasPrefix(term, "screen") {
+		if strings.has_prefix(term, "screen") {
 			// tmux supports TrueColor, screen only ANSI256
 			if getenv("TERM_PROGRAM") != "tmux" {
 				return ANSI256
@@ -77,52 +64,48 @@ output_color_profile :: proc(o: ^Output) -> Profile {
 	return Ascii
 }
 
-/*
-output_foreground_color :: proc(o: Output) -> Color {
+fg_color :: proc(o: ^Output) -> ^Color {
 	using Error
 	s, err := term_status_report(o, 10)
 	if err == No_Error {
-		c, err := x_term_color(s)
+		c, err := xterm_color(s)
 		if err == No_Error {
 			return c
 		}
 	}
 
-	color_fgbg := get_env(o.environ, "COLORFGBG")
+	color_fgbg := getenv("COLORFGBG")
 	if strings.contains(color_fgbg, ";") {
 		c := strings.split(color_fgbg, ";")
-		i, err := strconv.atoi(c[0])
-		if err == No_Error {
-			return ANSI_Color(i)
-		}
+		i := strconv.atoi(c[0])
+		return new_ansi_color(i)
 	}
 
 	// default gray
-	return ANSI_Color(7)
+	return new_ansi_color(7)
 }
-
-output_background_color :: proc(o: Output) -> Color {
+ 
+bg_color :: proc(o: ^Output) -> ^Color {
+	using Error
 	s, err := term_status_report(o, 11)
-	if err == nil {
-		c, err := xTermColor(s)
-		if err == nil {
+	if err == No_Error {
+		c, err := xterm_color(s)
+		if err == No_Error {
 			return c
 		}
 	}
 
-	color_fgbg := get_env(o.environ, "COLORFGBG")
-	if strings.Contains(color_fgbg, ";") {
-		c := strings.Split(color_fgbg, ";")
-		i, err := strconv.atoi(c[len(c)-1])
-		if err == nil {
-			return ANSIColor(i)
-		}
+	color_fgbg := getenv("COLORFGBG")
+	if strings.contains(color_fgbg, ";") {
+		c := strings.split(color_fgbg, ";")
+		i := strconv.atoi(c[len(c)-1])
+		return new_ansi_color(i)
 	}
 
 	// default black
-	return ANSIColor(0)
+	return new_ansi_color(0)
 }
-
+/*
 waitForData :: proc(o: ^Output, timeout: time.Duration) -> error {
 	fd := o.TTY().Fd()
 	tv := unix.NsecToTimeval(int64(timeout))
@@ -232,16 +215,19 @@ readNextResponse :: proc(o: ^Output) -> (response string, isOSC bool, err error)
 
 	return "", false, Err_Status_Report
 }
-
-term_status_report :: proc(o: Output, sequence: int) -> (string, Error) {
+*/
+term_status_report :: proc(o: ^Output, sequence: int) -> (string, Error) {
+	using Error
+	return "foo", No_Error
+	/*
 	// screen/tmux can't support OSC, because they can be connected to multiple
 	// terminals concurrently.
-	term := get_env(o.environ, "TERM")
+	term := sys.get_env("TERM")
 	if strings.has_prefix(term, "screen") || strings.has_prefix(term, "tmux") || strings.has_prefix(term, "dumb") {
 		return "", Err_Status_Report
 	}
 
-	tty := o.TTY()
+	tty := TTY(o)
 	if tty == nil {
 		return "", Err_Status_Report
 	}
@@ -268,19 +254,19 @@ term_status_report :: proc(o: Output, sequence: int) -> (string, Error) {
 	}
 
 	// first, send OSC query, which is ignored by terminal which do not support it
-	fmt.Fprintf(tty, OSC+"%d;?"+ST, sequence)
+	fmt.tprintf(tty, OSC+"%d;?"+ST, sequence)
 
 	// then, query cursor position, should be supported by all terminals
-	fmt.Fprintf(tty, CSI+"6n")
+	fmt.tprintf(tty, CSI+"6n")
 
 	// read the next response
-	res, isOSC, err := o.readNextResponse()
+	res, is_OSC, err := o.readNextResponse()
 	if err != nil {
 		return "", fmt.Errorf("%s: %s", Err_Status_Report, err)
 	}
 
 	// if this is not OSC response, then the terminal does not support it
-	if !isOSC {
+	if !is_OSC {
 		return "", Err_Status_Report
 	}
 
@@ -292,16 +278,16 @@ term_status_report :: proc(o: Output, sequence: int) -> (string, Error) {
 
 	// fmt.Println("Rcvd", res[1:])
 	return res, nil
+	*/
 }
 
 // enable_virtual_terminal_processing enables virtual terminal processing on
 // Windows for w and returns a function that restores w to its previous state.
 // On non-Windows platforms, or if w does not refer to a terminal, then it
 // returns a non-nil no-op function and no error.
-enable_virtual_terminal_processing :: proc(_: io.Writer) -> (proc() -> Error, Error) {
-	return proc() -> error { return No_Error }, No_Error
+enable_virtual_terminal_processing :: proc() -> (proc() -> Error, Error) {
+	return proc() -> Error { return .No_Error }, .No_Error
 }
 
-*/
 }
 

@@ -11,12 +11,9 @@ foreign sys {
    get_environ :: proc() -> []cstring ---
 }
 
-get_env :: proc(key: string) -> (env_str: string) {
-   env := libc.getenv(strings.clone_to_cstring(key))
-   length: int
-   for ; env[length] != nil; length +=1 {}
-   env_str = strings.string_from_ptr(env, length)
-   return
+get_env :: proc(key: string) -> string {
+   env := cstring(libc.getenv(strings.clone_to_cstring(key)))
+   return string(env)
 }
 
 get_env_slice :: proc() -> []string {

@@ -4,7 +4,6 @@ import "core:strings"
 import "core:strconv"
 
 import "colorful"
-import "colorful/color"
 
 Profile :: enum {
 	Undefined,
@@ -34,20 +33,19 @@ profile_convert :: proc(p: Profile, c: ^Color) -> ^Color {
 	switch v in c.type {
 	case ANSI_Color:
 		return v
-
 	case ANSI256_Color:
 		if p == ANSI do	return ansi256_to_ansi(v)
 		return v
-
 	case RGB_Color:
-		h, err := colorful.hex(string(v))
+		h, err := colorful.hex(v.c)
 		if err != 0 do return nil
 		if p != True_Color {
 			ac := hex_to_ansi256(h)
-			if p == ANSI do	return ansi256_to_ansi(ac)
+			if p == ANSI do	return ansi256_to_ansi(ac.type.(ANSI256_Color))
 			return ac
 		}
 		return v
+	case No_Color:
 	}
 
 	return c
@@ -71,10 +69,4 @@ profile_color :: proc(p: Profile, s: string) -> ^Color {
 	}
 
 	return profile_convert(p, c)
-}
-
-// FromColor creates a Color from a color.Color.
-profile_from_color :: proc(p: Profile, c: color.Color) -> ^Color {
-	col, _ := colorful.make_color(c)
-	return profile_color(p, colorful.color_hex(col))
 }

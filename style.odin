@@ -6,16 +6,15 @@ import "core:strings"
 import wc "deps/wcwidth"
 
 // Sequence definitions.
-RESET_SEQ     : string : "0"
-BOLD_SEQ      : string : "1"
-FAINT_SEQ     : string : "2"
-ITALIC_SEQ    : string : "3"
-UNDERLINE_SEQ : string : "4"
-BLINK_SEQ     : string : "5"
-REVERSE_SEQ   : string : "7"
-CROSOUT_SEQ   : string : "9"
-OVERLINE_SEQ  : string : "53"
-
+RESET_SEQ     := string("0")
+BOLD_SEQ      := string("1")
+FAINT_SEQ     := string("2")
+ITALIC_SEQ    := string("3")
+UNDERLINE_SEQ := string("4")
+BLINK_SEQ     := string("5")
+REVERSE_SEQ   := string("7")
+CROSSOUT_SEQ  := string("9")
+OVERLINE_SEQ  := string("53")
 
 // Style is a string that various rendering styles can be applied to.
 Style :: struct {
@@ -57,58 +56,58 @@ styled :: proc(t: Style, s: string) -> string {
 		return s
 	}
 
-	str := strings.concatenate(CSI, RESET_SEQ)
+	str := strings.concatenate([]string{CSI, RESET_SEQ})
 	return fmt.tprintf("%s%sm%s%sm", CSI, seq, s, str)
 }
 
 // foreground sets a foreground color.
 foreground :: proc(t: ^Style, c: ^Color) {
-	append(t.styles, sequence(c, false))
+	append(&t.styles, sequence(c, false))
 }
 
 // background sets a background color.
 background :: proc(t: ^Style, c: ^Color) {
-	append(t.styles, sequence(c, true))
+	append(&t.styles, sequence(c, true))
 }
 
 // bold enables bold rendering.
 bold :: proc(t: ^Style) {
-	append(t.styles, BOLD_SEQ)
+	append(&t.styles, BOLD_SEQ)
 }
 
 // faint enables faint rendering.
 faint :: proc(t: ^Style) {
-	append(t.styles, FAINT_SEQ)
+	append(&t.styles, FAINT_SEQ)
 }
 
 // italic enables italic rendering.
 italic :: proc(t: ^Style) {
-	append(t.styles, ITALIC_SEQ)
+	append(&t.styles, ITALIC_SEQ)
 }
 
 // underline enables underline rendering.
 underline :: proc(t: ^Style) {
-	append(t.styles, UNDERLINE_SEQ)
+	append(&t.styles, UNDERLINE_SEQ)
 }
 
 // overline enables overline rendering.
 overline :: proc(t: ^Style) {
-	append(t.styles, OVERLINE_SEQ)
+	append(&t.styles, OVERLINE_SEQ)
 }
 
 // blink enables blink mode.
 blink :: proc(t: ^Style) {
-	append(t.styles, BLINK_SEQ)
+	append(&t.styles, BLINK_SEQ)
 }
 
 // reverse enables reverse color mode.
 reverse :: proc(t: ^Style) {
-	append(t.styles, REVERSE_SEQ)
+	append(&t.styles, REVERSE_SEQ)
 }
 
 // cross_out enables crossed-out rendering.
 cross_out :: proc(t: ^Style) {
-	append(t.styles, CROSSOUT_SEQ)
+	append(&t.styles, CROSSOUT_SEQ)
 }
 
 // width returns the width required to print all runes in Style.

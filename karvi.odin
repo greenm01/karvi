@@ -17,21 +17,27 @@ Error :: enum {
 	Err_Status_Report,
 }
 
+// ANSI Escape Sequences:
+// https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797
+
 // Escape character
+// https://www.compart.com/en/unicode/U+001B
 ESC :: '\x1b'
 // Bell
 BEL :: '\a'
 // Control Sequence Introducer
 CSI := utf8.runes_to_string([]rune{ESC, '['})
 // Operating System Command
+// https://www.compart.com/en/unicode/U+009D
 OSC := utf8.runes_to_string([]rune{ESC, ']'})
-// String Terminator
-ST  := utf8.runes_to_string([]rune{ESC, `\000`})
+// String Terminator: 
+// https://www.compart.com/en/unicode/U+009C
+ST := utf8.runes_to_string([]rune{ESC, '\x9c'})
 
 is_tty :: proc(o: ^Output) -> bool {
 	if o.assume_tty || o.unsafe do return true
 	if len(o.environ.get_env("CI")) > 0 do	return false
-	fd := output_writer(o)
+	fd := writer(o)
 	if isatty(c.int(fd)) == 1 do return true
 	return false
 }
@@ -39,22 +45,22 @@ is_tty :: proc(o: ^Output) -> bool {
 // ColorProfile returns the supported color profile:
 // Ascii, ANSI, ANSI256, or TrueColor.
 color_profile :: proc() -> Profile {
-	return output_env_color_profile(output)
+	return output_color_profile(output)
 }
 
 // ForegroundColor returns the terminal's default foreground color.
 foreground_color :: proc() -> ^Color {
-	return output_foreground_color(output)
+	return output_fg_color(output)
 }
 
 // BackgroundColor returns the terminal's default background color.
 background_color :: proc() -> ^Color {
-	return output_background_color(output)
+	return output_bg_color(output)
 }
 
 // has_dark_background returns whether terminal uses a dark-ish background.
 has_dark_background :: proc() -> bool {
-	return output_has_dark_background(output)
+	return output_has_dark_bg(output)
 }
 
 // output_no_color returns true if the environment variables explicitly disable color output
@@ -83,7 +89,7 @@ env_no_color :: proc() -> bool {
 // If the terminal does not support any colors, but CLICOLOR_FORCE is set and not "0"
 // then the ANSI color profile will be returned.
 env_color_profile :: proc() -> Profile {
-	return env_color_profile(output)
+	return output_env_color_profile(output)
 }
 
 // EnvColorProfile returns the color profile based on environment variables set

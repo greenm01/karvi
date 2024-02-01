@@ -7,10 +7,10 @@ import "core:fmt"
 
 import "color"
 
-when ODIN_OS == .Windows do foreign import cbrt "cbrt.lib"
-when ODIN_OS == .Linux   do foreign import cbrt "cbrt.a"
+when ODIN_OS == .Windows do foreign import cbrt_c "cbrt.lib"
+when ODIN_OS == .Linux   do foreign import cbrt_c "cbrt.a"
 
-foreign cbrt {
+foreign cbrt_c {
 	cbrt :: proc(x: f64) -> f64 ---
 }
 
@@ -19,29 +19,48 @@ Color :: struct {
 	r, g, b: f64
 }
 
-// Constructs a colorful.Color from something implementing color.Color
-make_color :: proc(col: color.Color) -> (Color, bool) {
-	r, g, b, a := color.get_rgba(col.derived.(color.RGBA))
-	if a == 0 {
-		return Color{0, 0, 0}, false
-	}
-
-	// Since color.Color is alpha pre-multiplied, we need to divide the
-	// RGB values by alpha again in order to get back the original RGB.
-	r *= 0xffff
-	r /= a
-	g *= 0xffff
-	g /= a
-	b *= 0xffff
-	b /= a
-
-	return Color{f64(r) / 65535.0, f64(g) / 65535.0, f64(b) / 65535.0}, true
-}
-
 // color_hex returns the hex "html" representation of the color, as in #ff0080.
 color_hex :: proc(col: Color) -> string {
 	// Add 0.5 for rounding
 	return fmt.tprintf("#%02x%02x%02x", u8(col.r*255.0+0.5), u8(col.g*255.0+0.5), u8(col.b*255.0+0.5))
+}
+
+/// HSL ///
+///////////
+
+// Hsl returns the Hue [0..360], Saturation [0..1], and Luminance (lightness) [0..1] of the color.
+hsl :: proc(col: Color) -> (h, s, l: f64) {
+	min := math.min(math.min(col.r, col.g), col.b)
+	max := math.max(math.max(col.r, col.g), col.b)
+
+	l = (max + min) / 2
+
+	if min == max {
+		s = 0
+		h = 0
+	} else {
+		if l < 0.5 {
+			s = (max - min) / (max + min)
+		} else {
+			s = (max - min) / (2.0 - max - min)
+		}
+
+		if max == col.r {
+			h = (col.g - col.b) / (max - min)
+		} else if max == col.g {
+			h = 2.0 + (col.b-col.r)/(max-min)
+		} else {
+			h = 4.0 + (col.r-col.g)/(max-min)
+		}
+
+		h *= 60
+
+		if h < 0 {
+			h += 360
+		}
+	}
+
+	return
 }
 
 // hex parses a "html" hex color-string, either in the 3 "#f0c" or 6 "#ff1034" digits form.
@@ -108,19 +127,6 @@ xyz_to_linear_rgb :: proc(x, y, z: f64) -> (r, g, b: f64) {
 
 cub :: proc(v: f64) -> f64 {
 	return v * v * v
-}
-
-// For this part, we do as R's graphics.hcl does, not as wikipedia does.
-// Or is it the same?
-xyz_to_uv :: proc(x, y, z: f64) -> (u, v: f64) {
-	denom := x + 15.0*y + 3.0*z
-	if denom == 0.0 {
-		u, v = 0.0, 0.0
-	} else {
-		u = 4.0 * x / denom
-		v = 9.0 * y / denom
-	}
-	return
 }
 
 luv_to_xyz_white_ref :: proc(l, u, v: f64, wref: [3]f64) -> (x, y, z: f64) {

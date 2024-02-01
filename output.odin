@@ -6,6 +6,7 @@ import "core:sync"
 import "core:unicode/utf8"
 
 import sys "syscalls"
+import "colorful"
 
 // output is the default global output.
 output := new_output(os.stdout)
@@ -35,7 +36,7 @@ Environ :: struct {
 }
 
 new_environ :: proc() -> Environ {
-	return Environ{environ, get_env}
+	return Environ{environ, getenv}
 }
 
 environ :: proc() -> []string {
@@ -76,6 +77,7 @@ new_output :: proc(w: os.Handle, opts: ..Output_Option) -> ^Output {
 	return o
 }
 
+/*
 // WithEnvironment returns a new Output_Option for the given environment.
 with_environment :: proc(environ: Environ) -> Output_Option {
 	return proc(o: ^Output) {
@@ -109,7 +111,7 @@ with_tty :: proc(v: bool) -> Output_Option {
 		o.assume_tty = v
 	}
 }
-
+*/
 // WithUnsafe returns a new Output_Option with unsafe mode enabled. Unsafe mode doesn't
 // check whether or not the terminal is a TTY.
 //
@@ -124,17 +126,18 @@ with_unsafe :: proc() -> Output_Option {
 }
 
 // ForegroundColor returns the terminal's default foreground color.
-output_foreground_color :: proc(o: ^Output) -> ^Color {
-	f :: proc(o: ^Output) {
+output_fg_color :: proc(o: ^Output) -> ^Color {
+	f :: proc(output: rawptr) {
+		o: ^Output = auto_cast output
 		if !is_tty(o) {
 			return 
 		}
 
-		o.fg_color = foreground_color(o)
+		o.fg_color = fg_color(o)
 	}
 
    if o.cache {
-      sync.once_do(o.fg_sync, f, o)	
+      sync.once_do_with_data(&o.fg_sync, f, o)	
    } else {
       f(o)
    }
@@ -143,17 +146,18 @@ output_foreground_color :: proc(o: ^Output) -> ^Color {
 }
 
 // BackgroundColor returns the terminal's default background color.
-output_background_color :: proc(o: ^Output) -> ^Color {
-	f :: proc(o: ^Output) {
+output_bg_color :: proc(o: ^Output) -> ^Color {
+	f :: proc(output: rawptr) {
+		o: ^Output = auto_cast output
 		if !is_tty(o) {
 			return
 		}
 
-		o.bg_color = background_color(o)
+		o.bg_color = bg_color(o)
 	}
 
 	if o.cache {
-		sync.once_do(o.bg_sync, f, o)
+		sync.once_do_with_data(&o.bg_sync, f, o)
 	} else {
 		f(o)
 	}
@@ -162,24 +166,24 @@ output_background_color :: proc(o: ^Output) -> ^Color {
 }
 
 // HasDarkBackground returns whether terminal uses a dark-ish background.
- output_has_dark_background :: proc(o: ^Output) -> bool {
-	c := convert_to_rgb(output_background_color(o))
-	_, _, l := c.hsl()
+output_has_dark_bg :: proc(o: ^Output) -> bool {
+	c := convert_to_rgb(output_bg_color(o))
+	_, _, l := colorful.hsl(c)
 	return l < 0.5
 }
 
 // Writer returns the underlying writer. This may be of type io.Writer,
 // io.ReadWriter, or ^os.File.
-output_writer :: proc(o: ^Output) -> os.Handle {
+writer :: proc(o: ^Output) -> os.Handle {
 	return o.w
 }
 
-output_write :: proc(o: ^Output, r: []rune) -> (int, Error) {
-   return 0,0
+write :: proc(o: ^Output, r: []rune) -> (int, Error) {
+   return 0, .No_Error
 	//return write(o.w, r)
 }
 
 // WriteString writes the given string to the output.
-output_write_string :: proc(o: ^Output, s: string) -> (int, os.Errno) {
-	return output_write(o, utf8.string_to_runes(s))
+write_string :: proc(o: ^Output, s: string) -> (int, Error) {
+	return write(o, utf8.string_to_runes(s))
 }

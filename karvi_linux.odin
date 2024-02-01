@@ -7,6 +7,8 @@ import "core:strings"
 import "core:strconv"
 import "core:os"
 
+import sys "syscalls"
+
 // Linux, Darwin FreeBSD, OpenBSD 
 when ODIN_OS == .Linux {
 
@@ -108,28 +110,8 @@ when ODIN_OS == .Linux {
 	}
 
 	wait_for_data :: proc(o: ^Output, timeout: time.Duration) -> Errno {
-		fd := writer(o)
-		tv := unix.NsecToTimeval(int64(timeout))
-		var readfds unix.FdSet
-		readfds.Set(int(fd))
-
-		for {
-			// https://manpages.ubuntu.com/manpages/focal/en/man2/select.2.html
-			n, err := unix.Select(int(fd)+1, &readfds, nil, nil, &tv)
-			if err == unix.EINTR {
-				continue
-			}
-			if err != nil {
-				return err
-			}
-			if n == 0 {
-				return fmt.Errorf("timeout")
-			}
-
-			break
-		}
-
-		return nil
+		fd := int(writer(o))
+		return Errno(sys.wait_for_data(fd, timeout))
 	}
 
 /*

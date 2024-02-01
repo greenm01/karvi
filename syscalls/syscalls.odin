@@ -8,12 +8,12 @@ import "core:c/libc"
 import "core:strings"
 import "core:time"
 
-//when ODIN_OS == .Linux {
+when ODIN_OS == .Linux {
 
    foreign import system "sys_linux.a"
 
    foreign system {
-      get_environ :: proc() -> []cstring ---
+      get_envs :: proc() -> []cstring ---
       wait_data   :: proc(fd: c.int, wait: c.long) -> c.int --- 
    }
 
@@ -28,7 +28,7 @@ import "core:time"
    }
 
    get_env_slice :: proc() -> []string {
-      environ := get_environ()
+      environ := get_envs()
       defer delete(environ)
       e := make([dynamic]string)
       defer delete(e)
@@ -61,11 +61,11 @@ import "core:time"
       env = get_env_slice2()
       for e in env do fmt.println(e)
 
-      fmt.print("waiting for terminal data...")
-      wait: time.Duration = 1
-      wait_for_data(int(os.stdout), wait)
+      fmt.print("waiting for terminal data (press Enter)...")
+      wait: time.Duration = time.Second * 10
+      wait_for_data(int(os.stdin), wait)
       fmt.println("done!")
 
    }
 
-//}
+}

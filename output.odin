@@ -172,6 +172,19 @@ output_has_dark_bg :: proc(o: ^Output) -> bool {
 	return l < 0.5
 }
 
+/*
+// TTY returns the terminal's file descriptor. This may be nil if the output is
+// not a terminal.
+//
+// Deprecated: Use Writer() instead.
+tty :: proc(o: Output) -> File {
+	if f, ok := o.w.(File); ok {
+		return f
+	}
+	return nil
+}
+*/
+
 // Writer returns the underlying writer. This may be of type io.Writer,
 // io.ReadWriter, or ^os.File.
 writer :: proc(o: ^Output) -> os.Handle {

@@ -17,6 +17,8 @@ Error :: enum {
 	Err_Status_Report,
 }
 
+Errno :: distinct i32
+
 // ANSI Escape Sequences:
 // https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797
 

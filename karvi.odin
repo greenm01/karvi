@@ -11,10 +11,12 @@ foreign libc {
 	isatty :: proc(fd: c.int) -> c.int ---
 }
 
+// TODO: Unify Error and Errno
+
 Error :: enum {
 	No_Error,
 	Invalid_Color,
-	Err_Status_Report,
+	Err_Status_Report = 2001,
 }
 
 Errno :: distinct i32

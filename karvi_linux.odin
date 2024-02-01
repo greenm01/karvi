@@ -4,6 +4,7 @@ import "core:time"
 import "core:io"
 import "core:fmt"
 import "core:strings"
+import "core:unicode/utf8"
 import "core:strconv"
 import "core:os"
 
@@ -114,93 +115,96 @@ when ODIN_OS == .Linux {
 		return Errno(sys.wait_for_data(fd, timeout))
 	}
 
-/*
-	readNextByte :: proc(o: ^Output) -> (byte, error) {
+	read_next_byte :: proc(o: ^Output) -> (byte, Errno) {
 		if !o.unsafe {
-			if err := o.waitForData(OSC_TIMEOUT); err != nil {
+			if err := wait_for_data(o, OSC_TIMEOUT); err != 0 {
 				return 0, err
 			}
 		}
 
-		var b [1]byte
-		n, err := o.TTY().Read(b[:])
-		if err != nil {
-			return 0, err
+		b: [1]byte
+		n, err := os.read(writer(o), b[:])
+		if err != 0 {
+			return 0, Errno(err)
 		}
 
 		if n == 0 {
 			panic("read returned no data")
 		}
 
-		return b[0], nil
+		return b[0], Errno(0)
+	}
+
+	write_byte_to_string :: proc(s: string, b: byte) -> string {
+		builder := strings.builder_make()
+		strings.write_string(&builder, s)
+		strings.write_byte(&builder, b)
+		return strings.to_string(builder)
 	}
 
 	// readNextResponse reads either an OSC response or a cursor position response:
 	//   - OSC response: "\x1b]11;rgb:1111/1111/1111\x1b\\"
 	//   - cursor position response: "\x1b[42;1R"
-	readNextResponse :: proc(o: ^Output) -> (response string, isOSC bool, err error) {
-		start, err := o.readNextByte()
-		if err != nil {
-			return "", false, err
-		}
+	read_next_response :: proc(o: ^Output) -> (string, bool, Errno) {
+		using Error
+		
+		start, tpe: byte
+		err: Errno
+		
+		start, err = read_next_byte(o)
+		if err != 0 do return "", false, err
 
 		// first byte must be ESC
 		for start != ESC {
-			start, err = o.readNextByte()
-			if err != nil {
-				return "", false, err
-			}
+			start, err = read_next_byte(o)
+			if err != 0 do return "", false, err
 		}
 
-		response += string(start)
+		response := write_byte_to_string("", start)
 
 		// next byte is either '[' (cursor position response) or ']' (OSC response)
-		tpe, err := o.readNextByte()
-		if err != nil {
-			return "", false, err
-		}
+		tpe, err = read_next_byte(o)
+		if err != 0 do return "", false, err
 
-		response += string(tpe)
+		response = write_byte_to_string(response, tpe)
 
-		var oscResponse bool
+		osc_response: bool
 		switch tpe {
 		case '[':
-			oscResponse = false
+			osc_response = false
 		case ']':
-			oscResponse = true
-		default:
-			return "", false, Err_Status_Report
+			osc_response = true
+		case:
+			return "", false, Errno(Err_Status_Report)
 		}
 
 		for {
-			b, err := o.readNextByte()
-			if err != nil {
-				return "", false, err
-			}
+			b, err := read_next_byte(o)
+			if err != 0 do return "", false, err
 
-			response += string(b)
+			response = write_byte_to_string(response, b)
 
-			if oscResponse {
+			if osc_response {
 				// OSC can be terminated by BEL (\a) or ST (ESC)
-				if b == BEL || strings.HasSuffix(response, string(ESC)) {
-					return response, true, nil
+				esc := utf8.runes_to_string([]rune{ESC})
+				if b == BEL || strings.has_suffix(response, esc) {
+					return response, true, Errno(0)
 				}
 			} else {
 				// cursor position response is terminated by 'R'
 				if b == 'R' {
-					return response, false, nil
+					return response, false, Errno(0)
 				}
 			}
 
 			// both responses have less than 25 bytes, so if we read more, that's an error
-			if len(response) > 25 {
-				break
-			}
+			if len(response) > 25 do break
+			
 		}
 
-		return "", false, Err_Status_Report
+		return "", false, Errno(Err_Status_Report)
 	}
-	*/
+	
 	term_status_report :: proc(o: ^Output, sequence: int) -> (string, Error) {
 		using Error
 		return "foo", No_Error

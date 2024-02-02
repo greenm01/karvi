@@ -5,8 +5,6 @@ import "core:c/libc"
 import "core:math"
 import "core:fmt"
 
-import "color"
-
 when ODIN_OS == .Windows do foreign import cbrt_c "cbrt.lib"
 when ODIN_OS == .Linux   do foreign import cbrt_c "cbrt.a"
 

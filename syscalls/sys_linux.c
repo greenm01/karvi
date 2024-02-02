@@ -3,6 +3,10 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
+#include <sys/syscall.h>
+#include <termios.h>
 
 // https://man7.org/linux/man-pages/man7/environ.7.html
 extern char **environ;
@@ -23,4 +27,16 @@ int wait_data(int fd, long wait) {
 
   return select(fd+1, &rfds, NULL, NULL, &tv);
 
+}
+
+int get_ioctl(int fd, unsigned long request, int *value) {
+  return ioctl(fd, request, value);
+}
+
+int get_getpgid(int pid) {
+  return getpgid(pid);
+}
+
+long ioctl_ptr(long number, unsigned int fd, unsigned int req, struct termios *arg) {
+  return syscall(number, fd, req, arg);
 }

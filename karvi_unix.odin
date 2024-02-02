@@ -11,7 +11,7 @@ import "core:os"
 import sys "syscalls"
 
 // Linux, Darwin FreeBSD, OpenBSD 
-when ODIN_OS == .Linux {
+when ODIN_OS != .Windows {
 
 	// timeout for OSC queries
 	OSC_TIMEOUT :: 5 * time.Second
@@ -69,11 +69,10 @@ when ODIN_OS == .Linux {
 	}
 
 	fg_color :: proc(o: ^Output) -> ^Color {
-		using Error
 		s, err := term_status_report(o, 10)
-		if err == No_Error {
+		if err == 0 {
 			c, err := xterm_color(s)
-			if err == No_Error {
+			if err == .No_Error {
 				return c
 			}
 		}
@@ -92,9 +91,9 @@ when ODIN_OS == .Linux {
 	bg_color :: proc(o: ^Output) -> ^Color {
 		using Error
 		s, err := term_status_report(o, 11)
-		if err == No_Error {
+		if err == 0 {
 			c, err := xterm_color(s)
-			if err == No_Error {
+			if err == .No_Error {
 				return c
 			}
 		}
@@ -205,69 +204,71 @@ when ODIN_OS == .Linux {
 		return "", false, Errno(Err_Status_Report)
 	}
 	
-	term_status_report :: proc(o: ^Output, sequence: int) -> (string, Error) {
+	term_status_report :: proc(o: ^Output, sequence: int) -> (string, Errno) {
 		using Error
-		return "foo", No_Error
-		/*
 		// screen/tmux can't support OSC, because they can be connected to multiple
 		// terminals concurrently.
-		term := sys.get_env("TERM")
+		term := getenv("TERM")
 		if strings.has_prefix(term, "screen") || strings.has_prefix(term, "tmux") || strings.has_prefix(term, "dumb") {
-			return "", Err_Status_Report
+			return "", Errno(Err_Status_Report)
 		}
 
-		tty := TTY(o)
-		if tty == nil {
-			return "", Err_Status_Report
+		tty := writer(o)
+		if tty == 0 {
+			return "", Errno(Err_Status_Report)
 		}
 
 		if !o.unsafe {
-			fd := int(tty.Fd())
+			fd := int(tty)
 			// if in background, we can't control the terminal
-			if !isForeground(fd) {
-				return "", Err_Status_Report
+			if !is_foreground(fd) {
+				return "", Errno(Err_Status_Report)
 			}
 
-			t, err := unix.IoctlGetTermios(fd, tcgetattr)
-			if err != nil {
-				return "", fmt.Errorf("%s: %s", Err_Status_Report, err)
+			t, err := sys.ioctl_get_termios(fd, TC_GET_ATTR)
+			if err != 0 {
+				return "", Errno(Err_Status_Report)
 			}
-			defer unix.IoctlSetTermios(fd, tcsetattr, t) //nolint:errcheck
+			defer sys.ioctl_set_termios(fd, TC_SET_ATTR, t) //nolint:errcheck
 
-			noecho := ^t
-			noecho.Lflag = noecho.Lflag &^ unix.ECHO
-			noecho.Lflag = noecho.Lflag &^ unix.ICANON
-			if err := unix.IoctlSetTermios(fd, tcsetattr, &noecho); err != nil {
-				return "", fmt.Errorf("%s: %s", Err_Status_Report, err)
+			ECHO :: 0x8
+			ICANON :: 0x2
+ 
+			noecho := t^
+			noecho.c_lflag = noecho.c_lflag &~ ECHO
+			noecho.c_lflag = noecho.c_lflag &~ ICANON
+			if err := sys.ioctl_set_termios(fd, TC_SET_ATTR, &noecho); err != 0 {
+				return "", Errno(Err_Status_Report)
 			}
 		}
 
 		// first, send OSC query, which is ignored by terminal which do not support it
-		fmt.tprintf(tty, OSC+"%d;?"+ST, sequence)
+		str := strings.concatenate([]string{OSC, "%d;?", ST})
+		fmt.fprintf(tty, "%s%v", str, sequence)
 
 		// then, query cursor position, should be supported by all terminals
-		fmt.tprintf(tty, CSI+"6n")
+		str = strings.concatenate([]string{CSI, "6n"})
+		fmt.fprintf(tty, "%s", str)
 
 		// read the next response
-		res, is_OSC, err := o.readNextResponse()
-		if err != nil {
-			return "", fmt.Errorf("%s: %s", Err_Status_Report, err)
+		res, is_OSC, err := read_next_response(o)
+		if err != 0 {
+			return "", Errno(Err_Status_Report)
 		}
 
 		// if this is not OSC response, then the terminal does not support it
 		if !is_OSC {
-			return "", Err_Status_Report
+			return "", Errno(Err_Status_Report)
 		}
 
 		// read the cursor query response next and discard the result
-		_, _, err = o.readNextResponse()
-		if err != nil {
+		_, _, err = read_next_response(o)
+		if err != 0 {
 			return "", err
 		}
 
 		// fmt.Println("Rcvd", res[1:])
-		return res, nil
-		*/
+		return res, 0
 	}
 
 	// enable_virtual_terminal_processing enables virtual terminal processing on

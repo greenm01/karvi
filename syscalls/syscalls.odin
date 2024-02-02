@@ -10,11 +10,51 @@ import "core:time"
 
 when ODIN_OS == .Linux {
 
+   SYS_IOCTL :: 16
+
    foreign import system "sys_linux.a"
 
    foreign system {
-      get_envs :: proc() -> []cstring ---
-      wait_data   :: proc(fd: c.int, wait: c.long) -> c.int --- 
+      get_envs    :: proc() -> []cstring ---
+      wait_data   :: proc(fd: c.int, wait: c.long) -> c.int ---
+      get_ioctl   :: proc(fd: c.int, request: c.ulong, value: ^c.int) -> c.int ---
+      get_getpgid :: proc(pid: c.int) -> c.int ---
+      ioctl_ptr   :: proc(number: c.long, fd: c.uint, req: c.uint, arg: ^Termios) -> c.long ---
+   }
+
+   // https://github.com/openbsd/src/blob/master/sys/sys/termios.h
+
+   Termios :: struct {
+      c_iflag : c.ulong,     /* input mode flags */ 
+      c_oflag : c.ulong,     /* output mode flags */
+      c_cflag : c.ulong,     /* control mode flags */
+      c_lflag : c.ulong,     /* local mode flags */
+      c_line  : c.uchar,     /* line discipline */
+      c_cc    : [19]c.uchar, /* control characters */
+      c_ispeed: c.int,       /* input speed */
+      c_ospeed: c.int,       /* output speed */
+   }
+
+   ioctl_set_termios :: proc(fd: int, req: int, t: ^Termios) -> (err: int) {
+      err = int(ioctl_ptr(c.long(SYS_IOCTL), c.uint(fd), c.uint(req), t))
+      return
+   }
+   
+   ioctl_get_termios :: proc(fd: int, req: uint) -> (t: ^Termios, err: int) {
+      t = new(Termios)
+      err = int(ioctl_ptr(c.long(SYS_IOCTL), c.uint(fd), c.uint(req), t))
+      return
+   }   
+
+   getpgrp :: proc() -> int {
+      return int(get_getpgid(0))
+   }
+
+   ioctl :: proc(fd: int, request: uint) -> (value: int, err: int) {
+      v: c.int
+      err = int(get_ioctl(c.int(fd), c.ulong(request), &v))
+      value = int(v)
+      return 
    }
 
    wait_for_data :: proc(fd: int, wait: time.Duration) -> int {
@@ -65,6 +105,9 @@ when ODIN_OS == .Linux {
       wait: time.Duration = time.Second * 10
       wait_for_data(int(os.stdin), wait)
       fmt.println("done!")
+
+      t, err := ioctl_get_termios(1, 0x5401)
+      fmt.println(t, "err =", err)
 
    }
 

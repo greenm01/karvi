@@ -7,19 +7,20 @@ import "core:c"
 import "core:c/libc"
 import "core:strings"
 import "core:time"
+import "core:sys/unix"
 
 when ODIN_OS == .Linux {
 
-   SYS_IOCTL :: 16
+   SYS_ioctl :: unix.SYS_ioctl
 
    foreign import system "sys_linux.a"
 
    foreign system {
-      get_envs    :: proc() -> []cstring ---
-      wait_data   :: proc(fd: c.int, wait: c.long) -> c.int ---
-      get_ioctl   :: proc(fd: c.int, request: c.ulong, value: ^c.int) -> c.int ---
-      get_getpgid :: proc(pid: c.int) -> c.int ---
-      ioctl_ptr   :: proc(number: c.long, fd: c.uint, req: c.uint, arg: ^Termios) -> c.long ---
+      get_envs      :: proc() -> []cstring ---
+      wait_data     :: proc(fd: c.int, wait: c.long) -> c.int ---
+      get_ioctl     :: proc(fd: c.int, request: c.ulong, value: ^c.int) -> c.int ---
+      get_getpgid   :: proc(pid: c.int) -> c.int ---
+      ioctl_termios :: proc(number: c.long, fd: c.uint, req: c.uint, arg: ^Termios) -> c.long ---
    }
 
    // https://github.com/openbsd/src/blob/master/sys/sys/termios.h
@@ -36,13 +37,13 @@ when ODIN_OS == .Linux {
    }
 
    ioctl_set_termios :: proc(fd: int, req: int, t: ^Termios) -> (err: int) {
-      err = int(ioctl_ptr(c.long(SYS_IOCTL), c.uint(fd), c.uint(req), t))
+      err = int(ioctl_termios(c.long(SYS_ioctl), c.uint(fd), c.uint(req), t))
       return
    }
    
    ioctl_get_termios :: proc(fd: int, req: uint) -> (t: ^Termios, err: int) {
       t = new(Termios)
-      err = int(ioctl_ptr(c.long(SYS_IOCTL), c.uint(fd), c.uint(req), t))
+      err = int(ioctl_termios(c.long(SYS_ioctl), c.uint(fd), c.uint(req), t))
       return
    }   
 

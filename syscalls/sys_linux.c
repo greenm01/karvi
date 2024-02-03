@@ -37,6 +37,6 @@ int get_getpgid(int pid) {
   return getpgid(pid);
 }
 
-long ioctl_ptr(long number, unsigned int fd, unsigned int req, struct termios *arg) {
+long ioctl_termios(long number, unsigned int fd, unsigned int req, struct termios *arg) {
   return syscall(number, fd, req, arg);
 }

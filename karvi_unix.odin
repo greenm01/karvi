@@ -231,10 +231,7 @@ when ODIN_OS != .Windows {
 			}
 			defer sys.ioctl_set_termios(fd, TC_SET_ATTR, t) //nolint:errcheck
 
-			ECHO :: 0x8
-			ICANON :: 0x2
- 
-			noecho := t^
+ 			noecho := t^
 			noecho.c_lflag = noecho.c_lflag &~ ECHO
 			noecho.c_lflag = noecho.c_lflag &~ ICANON
 			if err := sys.ioctl_set_termios(fd, TC_SET_ATTR, &noecho); err != 0 {

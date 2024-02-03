@@ -172,31 +172,17 @@ output_has_dark_bg :: proc(o: ^Output) -> bool {
 	return l < 0.5
 }
 
-/*
-// TTY returns the terminal's file descriptor. This may be nil if the output is
-// not a terminal.
-//
-// Deprecated: Use Writer() instead.
-tty :: proc(o: Output) -> File {
-	if f, ok := o.w.(File); ok {
-		return f
-	}
-	return nil
-}
-*/
-
 // Writer returns the underlying writer. This may be of type io.Writer,
 // io.ReadWriter, or ^os.File.
 writer :: proc(o: ^Output) -> os.Handle {
 	return o.w
 }
 
-write :: proc(o: ^Output, r: []rune) -> (int, Error) {
-   return 0, .No_Error
-	//return write(o.w, r)
+write :: proc(o: ^Output, r: []u8) -> (int, os.Errno) {
+	return os.write(o.w, r)
 }
 
 // WriteString writes the given string to the output.
-write_string :: proc(o: ^Output, s: string) -> (int, Error) {
-	return write(o, utf8.string_to_runes(s))
+write_string :: proc(o: ^Output, s: string) -> (int, os.Errno) {
+	return write(o, transmute([]u8)utf8.string_to_runes(s))
 }

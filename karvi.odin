@@ -29,6 +29,7 @@ Errno :: distinct i32
 ESC :: '\x1b'
 // Bell
 BEL :: '\a'
+BELL := utf8.runes_to_string([]rune{BEL})
 // Control Sequence Introducer
 CSI := utf8.runes_to_string([]rune{ESC, '['})
 // Operating System Command
@@ -36,7 +37,7 @@ CSI := utf8.runes_to_string([]rune{ESC, '['})
 OSC := utf8.runes_to_string([]rune{ESC, ']'})
 // String Terminator: 
 // https://www.compart.com/en/unicode/U+009C
-ST := utf8.runes_to_string([]rune{ESC, '\x9c'})
+ST := utf8.runes_to_string([]rune{'\x9c'})
 
 is_tty :: proc(o: ^Output) -> bool {
 	if o.assume_tty || o.unsafe do return true

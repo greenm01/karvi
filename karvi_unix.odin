@@ -7,20 +7,63 @@ import "core:strings"
 import "core:unicode/utf8"
 import "core:strconv"
 import "core:os"
+import "core:c"
+import "core:c/libc"
 
 import sys "syscalls"
 
 // Linux, Darwin FreeBSD, OpenBSD 
 when ODIN_OS != .Windows {
-
+	
 	// timeout for OSC queries
 	OSC_TIMEOUT :: 5 * time.Second
+	ECHO := sys.echo
+	ICANON := sys.icanon
+
+	//orig_termios: ^sys.Termios
+
+	init :: proc() -> Errno {
+		/*
+		using Error
+		fd := c.int(os.stdin)
+		orig_termios = new(sys.Termios)
+		err := sys.get_termios(fd, orig_termios)
+		if err != 0 {
+			return Errno(Err_Status_Report)
+		}
+
+		fmt.println(orig_termios)
+		
+		noecho := orig_termios^
+		//noecho.c_lflag &~ (ECHO | ICANON)
+		foo := noecho.c_lflag
+		fmt.println(foo)
+		noecho.c_lflag = noecho.c_lflag &~ ECHO
+		foo &= ~(ECHO | ICANON)
+		fmt.println(foo)
+		if err = sys.set_termios(fd, &noecho); err != 0 {
+			return Errno(Err_Status_Report)
+		}
+		fmt.println(noecho)
+		*/
+		sys.enable_raw_mode()
+		return 0	
+	}
+
+	close :: proc() {
+		/*
+		fd := c.int(os.stdin)
+		fmt.println(orig_termios)
+		sys.set_termios(fd, orig_termios)
+		*/
+		sys.disable_raw_mode()
+	}
 
 	// ColorProfile returns the supported color profile:
 	// Ascii, ANSI, ANSI256, or TrueColor.
 	output_color_profile :: proc(o: ^Output) -> Profile {
 		using Profile
-		if is_tty(o) {
+		if !is_tty(o) {
 			return Ascii
 		}
 
@@ -49,7 +92,7 @@ when ODIN_OS != .Windows {
 		}
 
 		switch term {
-		case "xterm-kitty", "wezterm", "xterm-ghostty":
+		case "xterm-kitty", "wezterm", "xterm-ghostty", "foot":
 			return True_Color
 		case "linux":
 			return ANSI
@@ -69,29 +112,45 @@ when ODIN_OS != .Windows {
 	}
 
 	fg_color :: proc(o: ^Output) -> ^Color {
-		s, err := term_status_report(o, 10)
-		if err == 0 {
-			c, err := xterm_color(s)
+		res, err := term_status_report(o, 10)
+		if err != 0 {
+			c, err := xterm_color(res)
 			if err == .No_Error {
 				return c
 			}
 		}
 
+		// TODO: don't get colors from env
+		res = strings.trim_prefix(res, "\e]10;rgb:")
+		//res = strings.trim_right_null(res)
+		rgb: [3]string
+		i: int
+		for str in strings.split_iterator(&res, "/") {
+			//fmt.println(str)
+			rgb[i] = str
+			i += 1
+		}
+		//fmt.println(strconv.atoi("f8f8"))
+		//fmt.println(rgb[2])
+
+		// convert s from query above and parse color
 		color_fgbg := getenv("COLORFGBG")
+		//color_fgbg := get_terminal_fgbg(10)
+		//fmt.println("color_fgbg =", color_fgbg)
 		if strings.contains(color_fgbg, ";") {
 			c := strings.split(color_fgbg, ";")
 			i := strconv.atoi(c[0])
-			return new_ansi_color(i)
+			return new_ansi_color(i, c[0])
 		}
 
 		// default gray
-		return new_ansi_color(7)
+		return new_ansi_color(7, "#808080")
 	}
  
 	bg_color :: proc(o: ^Output) -> ^Color {
 		using Error
 		s, err := term_status_report(o, 11)
-		if err == 0 {
+		if err != 0 {
 			c, err := xterm_color(s)
 			if err == .No_Error {
 				return c
@@ -101,23 +160,25 @@ when ODIN_OS != .Windows {
 		color_fgbg := getenv("COLORFGBG")
 		if strings.contains(color_fgbg, ";") {
 			c := strings.split(color_fgbg, ";")
-			i := strconv.atoi(c[len(c)-1])
-			return new_ansi_color(i)
+			s := c[len(c)-1]
+			i := strconv.atoi(s)
+			return new_ansi_color(i, s)
 		}
 
 		// default black
-		return new_ansi_color(0)
+		return new_ansi_color(0, "#000000")
 	}
 
 	wait_for_data :: proc(o: ^Output, timeout: time.Duration) -> Errno {
 		fd := int(writer(o))
-		return Errno(sys.wait_for_data(fd, timeout))
+		err := Errno(sys.wait_for_data(fd, timeout))
+		return err
 	}
 
 	read_next_byte :: proc(o: ^Output) -> (byte, Errno) {
 		if !o.unsafe {
-			if err := wait_for_data(o, OSC_TIMEOUT); err != 0 {
-				return 0, err
+			if err := wait_for_data(o, OSC_TIMEOUT); err == -1 {
+				return 0, 2
 			}
 		}
 
@@ -149,7 +210,6 @@ when ODIN_OS != .Windows {
 		
 		start, tpe: byte
 		err: Errno
-		
 		start, err = read_next_byte(o)
 		if err != 0 do return "", false, err
 
@@ -182,7 +242,6 @@ when ODIN_OS != .Windows {
 			if err != 0 do return "", false, err
 
 			response = write_byte_to_string(response, b)
-
 			if osc_response {
 				// OSC can be terminated by BEL (\a) or ST (ESC)
 				esc := utf8.runes_to_string([]rune{ESC})
@@ -219,37 +278,33 @@ when ODIN_OS != .Windows {
 		}
 
 		if !o.unsafe {
-			fd := int(tty)
-			// if in background, we can't control the terminal
-			if !is_foreground(fd) {
-				return "", Errno(Err_Status_Report)
-			}
-
-			t, err := sys.ioctl_get_termios(fd, TC_GET_ATTR)
+			ot := new(sys.Termios)
+			err := sys.get_termios(ot)
 			if err != 0 {
 				return "", Errno(Err_Status_Report)
 			}
-			defer sys.ioctl_set_termios(fd, TC_SET_ATTR, t) //nolint:errcheck
-
- 			noecho := t^
+			defer sys.set_termios(ot)
+		
+			noecho := ot^
+			foo := noecho.c_lflag
 			noecho.c_lflag = noecho.c_lflag &~ ECHO
 			noecho.c_lflag = noecho.c_lflag &~ ICANON
-			if err := sys.ioctl_set_termios(fd, TC_SET_ATTR, &noecho); err != 0 {
+			if err = sys.set_termios(&noecho); err != 0 {
 				return "", Errno(Err_Status_Report)
 			}
 		}
 
 		// first, send OSC query, which is ignored by terminal which do not support it
 		str := strings.concatenate([]string{OSC, "%d;?", ST})
-		fmt.fprintf(tty, "%s%v", str, sequence)
+		fmt.fprintf(tty, str, sequence)
 
 		// then, query cursor position, should be supported by all terminals
 		str = strings.concatenate([]string{CSI, "6n"})
-		fmt.fprintf(tty, "%s", str)
+		fmt.fprintf(tty, str)
 
 		// read the next response
-		res, is_OSC, err := read_next_response(o)
-		if err != 0 {
+		res, is_OSC, er := read_next_response(o)
+		if er == -1 {
 			return "", Errno(Err_Status_Report)
 		}
 
@@ -259,12 +314,12 @@ when ODIN_OS != .Windows {
 		}
 
 		// read the cursor query response next and discard the result
-		_, _, err = read_next_response(o)
-		if err != 0 {
-			return "", err
+		r, _, er2 := read_next_response(o)
+		if er2 == -1 {
+			return "", er2
 		}
 
-		// fmt.Println("Rcvd", res[1:])
+		//fmt.println("Rcvd", res[1:])
 		return res, 0
 	}
 

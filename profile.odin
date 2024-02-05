@@ -2,7 +2,6 @@ package karvi
 
 import "core:strings"
 import "core:strconv"
-
 import "colorful"
 
 Profile :: enum {
@@ -28,7 +27,7 @@ profile_string :: proc(p: Profile, s: ..string) -> Style {
 // Convert transforms a given Color to a Color supported within the Profile.
 profile_convert :: proc(p: Profile, c: ^Color) -> ^Color {
 	using Profile
-	if p == Ascii do return No_Color{}
+	if p == Ascii do return new_no_color()
 
 	switch v in c.type {
 	case ANSI_Color:
@@ -46,6 +45,7 @@ profile_convert :: proc(p: Profile, c: ^Color) -> ^Color {
 		}
 		return v
 	case No_Color:
+		return new_no_color()
 	}
 
 	return c
@@ -53,8 +53,8 @@ profile_convert :: proc(p: Profile, c: ^Color) -> ^Color {
 
 // Color creates a Color from a string. Valid inputs are hex colors, as well as
 // ANSI color codes (0-15, 16-255).
-profile_color :: proc(p: Profile, s: string) -> ^Color {
-	if len(s) == 0 do return new(Color)
+color :: proc(p: Profile, s: string) -> ^Color {
+	if len(s) == 0 do return nil
 
 	c: ^Color
 	if strings.has_prefix(s, "#") {
@@ -62,9 +62,9 @@ profile_color :: proc(p: Profile, s: string) -> ^Color {
 	} else {
 		i := strconv.atoi(s)
 		if i < 16 {
-			c = new_ansi_color(i)
+			c = new_ansi_color(i, s)
 		} else {
-			c = new_ansi256_color(i)
+			c = new_ansi256_color(i, s)
 		}
 	}
 

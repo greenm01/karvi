@@ -16,11 +16,22 @@ when ODIN_OS == .Linux {
    foreign import system "sys_linux.a"
 
    foreign system {
-      get_envs      :: proc() -> []cstring ---
-      wait_data     :: proc(fd: c.int, wait: c.long) -> c.int ---
-      get_ioctl     :: proc(fd: c.int, request: c.ulong, value: ^c.int) -> c.int ---
-      get_getpgid   :: proc(pid: c.int) -> c.int ---
-      ioctl_termios :: proc(number: c.long, fd: c.uint, req: c.uint, arg: ^Termios) -> c.long ---
+      environ: []cstring
+      echo: c.ulong
+      icanon: c.ulong
+      isatty           :: proc(fd: c.int) -> c.int ---
+      wait_data        :: proc(fd: c.int, wait: c.long) -> c.int ---
+      get_ioctl        :: proc(fd: c.int, request: c.ulong, value: ^c.int) -> c.int ---
+      get_getpgid      :: proc(pid: c.int) -> c.int ---
+      get_termios      :: proc(t: ^Termios) -> c.int ---
+      set_termios      :: proc(t: ^Termios) -> c.int ---
+      enable_raw_mode  :: proc() ---
+      disable_raw_mode :: proc() ---
+      get_env          :: proc(cstring) -> cstring ---
+   }
+
+   is_atty :: proc(fd: os.Handle) -> int {
+      return int(isatty(c.int(fd)))
    }
 
    // https://github.com/openbsd/src/blob/master/sys/sys/termios.h
@@ -35,17 +46,6 @@ when ODIN_OS == .Linux {
       c_ispeed: c.int,       /* input speed */
       c_ospeed: c.int,       /* output speed */
    }
-
-   ioctl_set_termios :: proc(fd: int, req: int, t: ^Termios) -> (err: int) {
-      err = int(ioctl_termios(c.long(SYS_ioctl), c.uint(fd), c.uint(req), t))
-      return
-   }
-   
-   ioctl_get_termios :: proc(fd: int, req: uint) -> (t: ^Termios, err: int) {
-      t = new(Termios)
-      err = int(ioctl_termios(c.long(SYS_ioctl), c.uint(fd), c.uint(req), t))
-      return
-   }   
 
    getpgrp :: proc() -> int {
       return int(get_getpgid(0))
@@ -63,14 +63,14 @@ when ODIN_OS == .Linux {
       return int(wait_data(c.int(fd), c.long(usec)))
    }
 
+   /*
    get_env :: proc(key: string) -> string {
       env := cstring(libc.getenv(strings.clone_to_cstring(key)))
       return string(env)
    }
+   */
 
    get_env_slice :: proc() -> []string {
-      environ := get_envs()
-      defer delete(environ)
       e := make([dynamic]string)
       defer delete(e)
       for i in 0 ..= len(environ) {
@@ -92,24 +92,31 @@ when ODIN_OS == .Linux {
    }
 
    main :: proc() {
-      env := get_env_slice()
+  
+      //env := get_env_slice()
+      //for e in env do fmt.println(e)
+
+      fmt.println("****************************")
+      fmt.println("****************************")
+      fmt.println("****************************")
+
+      env := get_env_slice2()
       for e in env do fmt.println(e)
 
-      fmt.println("****************************")
-      fmt.println("****************************")
-      fmt.println("****************************")
-
-      env = get_env_slice2()
-      for e in env do fmt.println(e)
-
-      fmt.print("waiting for terminal data (press Enter)...")
-      wait: time.Duration = time.Second * 10
-      wait_for_data(int(os.stdin), wait)
+      enable_raw_mode()
+      defer disable_raw_mode()
+      
+      fmt.print("waiting for terminal data...")
+      // query the cursor position
+      fd := os.stdout
+      fmt.fprintf(fd, "\e[6n")
+      wait: time.Duration = time.Second
+      wait_for_data(int(fd), wait)
       fmt.println("done!")
 
-      t, err := ioctl_get_termios(1, 0x5401)
-      fmt.println(t, "err =", err)
+      fmt.println("COLORFGBG = ", get_env(cstring("COLORFGBG")))
+
+      fmt.println("is atty?", is_atty(os.stdout))
 
    }
-
 }

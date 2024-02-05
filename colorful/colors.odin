@@ -70,11 +70,10 @@ hex :: proc(scol: string) -> (Color, int) {
 		factor = 1.0 / 15.0
 	}
 
-	r, g, b: u8
+	r, g, b: i32
 	s := strings.clone_to_cstring(scol)
 	f := strings.clone_to_cstring(format)
 	n := libc.sscanf(s, f, &r, &g, &b)
-	//n, err := fmt.Sscanf(scol, format, &r, &g, &b)
 	if n != 3 {
 		return Color{}, 1
 	}

@@ -4,6 +4,7 @@ import "core:io"
 import "core:os"
 import "core:sync"
 import "core:unicode/utf8"
+import "core:strings"
 
 import sys "syscalls"
 import "colorful"
@@ -44,7 +45,7 @@ environ :: proc() -> []string {
 }
 
 getenv :: proc(key: string) -> string {
-	return sys.get_env(key)
+	return string(sys.get_env(strings.clone_to_cstring(key)))
 }
 
 // DefaultOutput returns the default global output.
@@ -61,15 +62,15 @@ set_default_output :: proc(o: ^Output) {
 new_output :: proc(w: os.Handle, opts: ..Output_Option) -> ^Output {
 	using Profile
 	o := new(Output)
-	o.w        = w
-	o.environ  = new_environ()
-	o.profile  = Undefined      
-	o.fg_color = new_no_color()
-	o.bg_color = new_no_color()
+	o.w          = w
+	o.environ    = new_environ()
+	o.profile    = Undefined      
+	o.fg_color   = new_no_color()
+	o.bg_color   = new_no_color()
+	o.unsafe     = false
 
-	for opt in opts {
-		opt(o)
-	}
+	for opt in opts do opt(o)
+
 	if o.profile == Undefined {
 		o.profile = output_env_color_profile(o)
 	}
@@ -136,13 +137,14 @@ output_fg_color :: proc(o: ^Output) -> ^Color {
 		o.fg_color = fg_color(o)
 	}
 
-   if o.cache {
-      sync.once_do_with_data(&o.fg_sync, f, o)	
-   } else {
-      f(o)
-   }
+	if o.cache {
+		sync.once_do_with_data(&o.fg_sync, f, o)	
+	} else {
+		f(o)
+	}
 
-   return o.fg_color
+	return o.fg_color
+
 }
 
 // BackgroundColor returns the terminal's default background color.

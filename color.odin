@@ -3,6 +3,7 @@ package karvi
 import "core:fmt"
 import "core:math"
 import "core:strings"
+import "core:strconv"
 import "core:unicode/utf8"
 
 import "colorful"
@@ -159,21 +160,20 @@ rgb_sequence :: proc(c: ^Color, bg: bool) -> string {
 	return fmt.tprintf("%s;2;%d;%d;%d", prefix, u8(f.r*255), u8(f.g*255), u8(f.b*255))
 }
 
+// Converts an xterm term color with a 4 digit RGB component
+// https://www.x.org/releases/X11R7.7/doc/man/man7/X.7.xhtml#heading11
 xterm_color :: proc(s: string) -> (^Color, Error) {
 	using Error
 	if len(s) < 24 || len(s) > 25 {
 		return new_rgb_color(""), Invalid_Color
 	}
 
-	bel := utf8.runes_to_string([]rune{BEL})
-	esc := utf8.runes_to_string([]rune{ESC})
-
 	str := s
 	switch {
-	case strings.has_suffix(str, bel):
-		str = strings.trim_suffix(str, bel)
-	case strings.has_suffix(str, esc):
-		str = strings.trim_suffix(str, esc)
+	case strings.has_suffix(str, BEL):
+		str = strings.trim_suffix(str, BEL)
+	case strings.has_suffix(str, ESC):
+		str = strings.trim_suffix(str, ESC)
 	case strings.has_suffix(str, ST):
 		str = strings.trim_suffix(str, ST)
 	case:
@@ -181,18 +181,47 @@ xterm_color :: proc(s: string) -> (^Color, Error) {
 	}
 
 	str = str[4:]
-
 	prefix := ";rgb:"
-	if !strings.has_prefix(s, prefix) {
+	if !strings.has_prefix(str, prefix) {
 		return new_rgb_color(""), Invalid_Color
 	}
-	str = strings.trim_prefix(s, prefix)
+
+	str = strings.trim_prefix(str, prefix)
 
 	h := strings.split(str, "/")
 	hex := fmt.tprintf("#%s%s%s", h[0][:2], h[1][:2], h[2][:2])
 	return new_rgb_color(hex), No_Error
 }
 
+// Similar to above, but shifting some bits and returns a string
+xterm_color2 :: proc(s: string, cmd: int) -> string {
+	prefix := fmt.tprintf("\e]%d;rgb:", cmd)
+	s := strings.trim_prefix(s, prefix)
+	// trim both just in case
+	s = strings.trim_right(s, ST)
+	s = strings.trim_right(s, BEL)
+	
+	i: int
+	rgb: [3]f64
+	for str in strings.split_iterator(&s, "/") {
+		num, _ := strconv.parse_int(str, 16)
+		rgb[i] = f64(num)
+		i += 1
+	}
+
+	// https://github.com/dranjan/python-colordemo/blob/master/colordemo/terminal_query.py#L360
+	// assume four digits
+	nd: uint = 4 
+	u := ((1 << (nd << 2)) - 1)
+	fu := f64(u)
+
+	r := rgb[0]/fu 
+	g := rgb[1]/fu
+	b := rgb[2]/fu 
+
+	return colorful.color_hex(colorful.Color{r, g, b})
+}
+	
 ansi256_to_ansi :: proc(c: ANSI256_Color) -> ^Color {
 	r: int
 	md := math.F64_MAX

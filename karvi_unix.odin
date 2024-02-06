@@ -5,7 +5,6 @@ import "core:io"
 import "core:fmt"
 import "core:strings"
 import "core:unicode/utf8"
-import "core:strconv"
 import "core:os"
 import "core:c"
 import "core:c/libc"
@@ -17,45 +16,17 @@ when ODIN_OS != .Windows {
 	
 	// timeout for OSC queries
 	OSC_TIMEOUT :: 5 * time.Second
+	
 	ECHO := sys.echo
 	ICANON := sys.icanon
 
-	//orig_termios: ^sys.Termios
-
 	init :: proc() -> Errno {
-		/*
-		using Error
-		fd := c.int(os.stdin)
-		orig_termios = new(sys.Termios)
-		err := sys.get_termios(fd, orig_termios)
-		if err != 0 {
-			return Errno(Err_Status_Report)
-		}
-
-		fmt.println(orig_termios)
-		
-		noecho := orig_termios^
-		//noecho.c_lflag &~ (ECHO | ICANON)
-		foo := noecho.c_lflag
-		fmt.println(foo)
-		noecho.c_lflag = noecho.c_lflag &~ ECHO
-		foo &= ~(ECHO | ICANON)
-		fmt.println(foo)
-		if err = sys.set_termios(fd, &noecho); err != 0 {
-			return Errno(Err_Status_Report)
-		}
-		fmt.println(noecho)
-		*/
+		// TODO: add some error handling
 		sys.enable_raw_mode()
 		return 0	
 	}
 
 	close :: proc() {
-		/*
-		fd := c.int(os.stdin)
-		fmt.println(orig_termios)
-		sys.set_termios(fd, orig_termios)
-		*/
 		sys.disable_raw_mode()
 	}
 
@@ -113,66 +84,33 @@ when ODIN_OS != .Windows {
 
 	fg_color :: proc(o: ^Output) -> ^Color {
 		res, err := term_status_report(o, 10)
-		if err != 0 {
+		if err == 0 {
 			c, err := xterm_color(res)
 			if err == .No_Error {
 				return c
 			}
 		}
 
-		// TODO: don't get colors from env
-		res = strings.trim_prefix(res, "\e]10;rgb:")
-		//res = strings.trim_right_null(res)
-		rgb: [3]string
-		i: int
-		for str in strings.split_iterator(&res, "/") {
-			//fmt.println(str)
-			rgb[i] = str
-			i += 1
-		}
-		//fmt.println(strconv.atoi("f8f8"))
-		//fmt.println(rgb[2])
-
-		// convert s from query above and parse color
-		color_fgbg := getenv("COLORFGBG")
-		//color_fgbg := get_terminal_fgbg(10)
-		//fmt.println("color_fgbg =", color_fgbg)
-		if strings.contains(color_fgbg, ";") {
-			c := strings.split(color_fgbg, ";")
-			i := strconv.atoi(c[0])
-			return new_ansi_color(i, c[0])
-		}
-
-		// default gray
-		return new_ansi_color(7, "#808080")
+		// TODO: add back env query and fallthrough
+		return new_rgb_color(xterm_color2(res, 10))
 	}
  
 	bg_color :: proc(o: ^Output) -> ^Color {
 		using Error
-		s, err := term_status_report(o, 11)
-		if err != 0 {
-			c, err := xterm_color(s)
+		res, err := term_status_report(o, 11)
+		if err == 0 {
+			c, err := xterm_color(res)
 			if err == .No_Error {
 				return c
 			}
 		}
-
-		color_fgbg := getenv("COLORFGBG")
-		if strings.contains(color_fgbg, ";") {
-			c := strings.split(color_fgbg, ";")
-			s := c[len(c)-1]
-			i := strconv.atoi(s)
-			return new_ansi_color(i, s)
-		}
-
-		// default black
-		return new_ansi_color(0, "#000000")
+		// TODO: add back env query and fallthrough
+		return new_rgb_color(xterm_color2(res, 11))
 	}
 
 	wait_for_data :: proc(o: ^Output, timeout: time.Duration) -> Errno {
 		fd := int(writer(o))
-		err := Errno(sys.wait_for_data(fd, timeout))
-		return err
+		return Errno(sys.wait_for_data(fd, timeout))
 	}
 
 	read_next_byte :: proc(o: ^Output) -> (byte, Errno) {
@@ -213,8 +151,8 @@ when ODIN_OS != .Windows {
 		start, err = read_next_byte(o)
 		if err != 0 do return "", false, err
 
-		// first byte must be ESC
-		for start != ESC {
+		// first byte must be ESC (\e)
+		for start != '\e' {
 			start, err = read_next_byte(o)
 			if err != 0 do return "", false, err
 		}
@@ -244,8 +182,7 @@ when ODIN_OS != .Windows {
 			response = write_byte_to_string(response, b)
 			if osc_response {
 				// OSC can be terminated by BEL (\a) or ST (ESC)
-				esc := utf8.runes_to_string([]rune{ESC})
-				if b == BEL || strings.has_suffix(response, esc) {
+				if b == '\a' || strings.has_suffix(response, ESC) {
 					return response, true, Errno(0)
 				}
 			} else {
@@ -277,21 +214,19 @@ when ODIN_OS != .Windows {
 			return "", Errno(Err_Status_Report)
 		}
 
-		if !o.unsafe {
-			ot := new(sys.Termios)
-			err := sys.get_termios(ot)
-			if err != 0 {
-				return "", Errno(Err_Status_Report)
-			}
-			defer sys.set_termios(ot)
-		
-			noecho := ot^
-			foo := noecho.c_lflag
-			noecho.c_lflag = noecho.c_lflag &~ ECHO
-			noecho.c_lflag = noecho.c_lflag &~ ICANON
-			if err = sys.set_termios(&noecho); err != 0 {
-				return "", Errno(Err_Status_Report)
-			}
+		ot := new(sys.Termios)
+		err := sys.get_termios(ot)
+		if err != 0 {
+			return "", Errno(Err_Status_Report)
+		}
+		defer sys.set_termios(ot)
+	
+		noecho := ot^
+		foo := noecho.c_lflag
+		noecho.c_lflag = noecho.c_lflag &~ ECHO
+		noecho.c_lflag = noecho.c_lflag &~ ICANON
+		if err = sys.set_termios(&noecho); err != 0 {
+			return "", Errno(Err_Status_Report)
 		}
 
 		// first, send OSC query, which is ignored by terminal which do not support it
@@ -323,6 +258,7 @@ when ODIN_OS != .Windows {
 		return res, 0
 	}
 
+	// TODO: Do we need this or equivalent?
 	// enable_virtual_terminal_processing enables virtual terminal processing on
 	// Windows for w and returns a function that restores w to its previous state.
 	// On non-Windows platforms, or if w does not refer to a terminal, then it

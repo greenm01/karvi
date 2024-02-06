@@ -61,10 +61,10 @@ StartBracketedPasteSeq   :: "200~"
 EndBracketedPasteSeq     :: "201~"
 
 // Session.
-SetWindowTitleSeq     := concat([]string{"2;%s", BELL})
-SetForegroundColorSeq := concat([]string{"10;%s", BELL})
-SetBackgroundColorSeq := concat([]string{"11;%s", BELL})
-SetCursorColorSeq     := concat([]string{"12;%s", BELL})
+SetWindowTitleSeq     := concat([]string{"2;%s", BEL})
+SetForegroundColorSeq := concat([]string{"10;%s", BEL})
+SetBackgroundColorSeq := concat([]string{"11;%s", BEL})
+SetCursorColorSeq     := concat([]string{"12;%s", BEL})
 ShowCursorSeq         :: "?25h"
 HideCursorSeq         :: "?25l"
 

@@ -43,8 +43,7 @@ main :: proc() {
 
 	fmt.printf("\n\t%s %s\n", kv.set_bold("Has foreground color"), kv.foreground_color())
 	fmt.printf("\t%s %s\n", kv.set_bold("Has background color"), kv.background_color())
-	fmt.printf("\t%s %t\n", kv.set_bold("Has dark background?"), kv.has_dark_background())
-	fmt.println("done")
+	fmt.printf("\t%s %t\n\n", kv.set_bold("Has dark background?"), kv.has_dark_background())
 
 }
 

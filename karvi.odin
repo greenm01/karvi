@@ -20,16 +20,15 @@ Errno :: distinct i32
 // https://medium.com/israeli-tech-radar/terminal-escape-codes-are-awesome-heres-why-c8eb938b1a1c
 
 // Escape character
-ESC :: '\e'
+ESC : string : "\e"
 // Bell
-BEL :: '\a'
-BELL := utf8.runes_to_string([]rune{BEL})
+BEL : string : "\a"
 // Control Sequence Introducer
-CSI := "\e["
+CSI : string : "\e["
 // Operating System Command
-OSC := "\e]"
+OSC : string : "\e]"
 // String Terminator: 
-ST := "\e\\"
+ST : string : "\e\\"
 
 is_tty :: proc(o: ^Output) -> bool {
 	if o.assume_tty || o.unsafe do return true

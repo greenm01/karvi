@@ -80,33 +80,37 @@ set_crossout :: proc(s: string) -> string {
 set_foreground :: proc(s: string, fg: ^Color) -> string {
 	style := new_style(s)
 	defer del_style(style)
-	foreground(style, fg)
+	set_style_foreground(style, fg)
 	return get_string(style)	
 }
 
 set_background :: proc(s: string, bg: ^Color) -> string {
 	style := new_style(s)
 	defer del_style(style)
-	background(style, bg)
+	set_style_background(style, bg)
 	return get_string(style)	
 }
 
 set_foreground_background :: proc(s: string, fg, bg: ^Color) -> string {
 	style := new_style(s)
 	defer del_style(style)
-	foreground(style, fg)
-	background(style, bg)
+	set_style_foreground(style, fg)
+	set_style_background(style, bg)
 	return get_string(style)	
 }
 
 // foreground sets a foreground color.
-foreground :: proc(t: ^Style, c: ^Color) {
+set_style_foreground :: proc(t: ^Style, c: ^Color) {
 	append(&t.styles, sequence(c, false))
 }
 
 // background sets a background color.
-background :: proc(t: ^Style, c: ^Color) {
+set_style_background :: proc(t: ^Style, c: ^Color) {
 	append(&t.styles, sequence(c, true))
+}
+
+render_style :: proc(t: ^Style) -> string {
+	return styled(t, t.str)
 }
 
 // styled renders s with all applied styles.

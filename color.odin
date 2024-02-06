@@ -101,6 +101,11 @@ convert_to_rgb :: proc(c: ^Color) -> colorful.Color {
 	return ch
 }
 
+// returns a hex string from a color
+hex :: proc(c: ^Color) -> string {
+	return colorful.color_hex(convert_to_rgb(c))
+}
+
 sequence :: proc(color: ^Color, bg: bool) -> string {
 	using Profile
 	switch c in color.type {

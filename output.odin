@@ -1,6 +1,5 @@
 package karvi
 
-import "core:fmt"  // TODO: remove
 import "core:io"
 import "core:os"
 import "core:sync"
@@ -11,7 +10,7 @@ import sys "syscalls"
 import "colorful"
 
 // output is the default global output.
-output := new_output(os.stdout)
+output := new_output(os.stdout, os.stdin, os.stderr)
 
 // Output_Option sets an option on Output.
 Output_Option :: proc(^Output)
@@ -19,7 +18,9 @@ Output_Option :: proc(^Output)
 // Output is a terminal output.
 Output :: struct {
 	profile: Profile,
-	w:       os.Handle,
+	w:       os.Handle,  // writer
+	r:       os.Handle,  // reader
+	e:       os.Handle,  // error
 	environ: Environ,
 
 	assume_tty: bool,
@@ -60,10 +61,12 @@ set_default_output :: proc(o: ^Output) {
 }
 
 // new_output returns a new Output for the given writer.
-new_output :: proc(w: os.Handle, opts: ..Output_Option) -> ^Output {
+new_output :: proc(w, r, e: os.Handle, opts: ..Output_Option) -> ^Output {
 	using Profile
 	o := new(Output)
 	o.w          = w
+	o.r          = r
+	o.e          = e
 	o.environ    = new_environ()
 	o.profile    = Undefined      
 	o.fg_color   = new_no_color()

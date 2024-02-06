@@ -1,6 +1,5 @@
 package karvi
 
-import "core:os"
 import "core:fmt"
 import "core:strings"
 
@@ -12,7 +11,7 @@ output_copy :: proc(o: ^Output, str: string) {
 	if strings.has_prefix(get_env("TERM"), "screen") {
 		osc52.set_screen(s)
 	}
-	fmt.fprintf(os.stderr, osc52.get_string(s))
+	osc52.write_to(s, o.e)
 }
 
 // CopyPrimary copies text to primary clipboard (X11) using OSC 52 escape
@@ -23,7 +22,7 @@ output_copy_primary :: proc(o: ^Output, str: string) {
 	if strings.has_prefix(get_env("TERM"), "screen") {
 		osc52.set_screen(s)
 	}
-	fmt.fprintf(os.stderr, osc52.get_string(s))
+	osc52.write_to(s, o.e)
 }
 
 // Copy copies text to system clipboard using OSC 52 escape sequence.

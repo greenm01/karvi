@@ -71,7 +71,7 @@ package osc52
 import "core:encoding/base64"
 import "core:fmt"
 import "core:bufio"
-import "core:io"
+import "core:os"
 import "core:strings"
 
 // Clipboard is the clipboard buffer to use.
@@ -167,10 +167,10 @@ get_string :: proc(s: ^Sequence) -> string {
 	return strings.to_string(seq)
 }
 
-// WriteTo writes the OSC52 sequence to the writer.
-write_to :: proc(s: ^Sequence, out: ^bufio.Writer) -> (i64, io.Error) {
-	n, err := bufio.writer_write(out, transmute([]u8)get_string(s))
-	return i64(n), err
+// WriteTo writes the OSC52 sequence to the system hangle.
+write_to :: proc(s: ^Sequence, h: os.Handle) -> (int, os.Errno) {
+	n, err := os.write_string(h, get_string(s))
+	return n, err
 }
 
 // mode sets the mode for the OSC52 sequence.

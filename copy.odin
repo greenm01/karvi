@@ -1,17 +1,18 @@
 package karvi
 
+import "core:os"
+import "core:fmt"
 import "core:strings"
 
 import "osc52"
 
-// Copy copies text to clipboard using OSC 52 escape sequence.
+// Copy copies text to system clipboard using OSC 52 escape sequence.
 output_copy :: proc(o: ^Output, str: string) {
 	s := osc52.new_sequence(str)
-	if strings.has_prefix(getenv("TERM"), "screen") {
+	if strings.has_prefix(get_env("TERM"), "screen") {
 		osc52.set_screen(s)
 	}
-	// TODO: Fix later
-	//osc52.write_to(s, o)
+	fmt.fprintf(os.stderr, osc52.get_string(s))
 }
 
 // CopyPrimary copies text to primary clipboard (X11) using OSC 52 escape
@@ -19,14 +20,13 @@ output_copy :: proc(o: ^Output, str: string) {
 output_copy_primary :: proc(o: ^Output, str: string) {
 	s := osc52.new_sequence(str)
 	osc52.set_primary(s)
-	if strings.has_prefix(getenv("TERM"), "screen") {
+	if strings.has_prefix(get_env("TERM"), "screen") {
 		osc52.set_screen(s)
 	}
-	// TODO: Fix later
-	//osc52.write_to(s, o)
+	fmt.fprintf(os.stderr, osc52.get_string(s))
 }
 
-// Copy copies text to clipboard using OSC 52 escape sequence.
+// Copy copies text to system clipboard using OSC 52 escape sequence.
 copy :: proc(str: string) {
 	output_copy(output, str)
 }

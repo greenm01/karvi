@@ -1,6 +1,7 @@
 package karvi
 
 import "core:strings"
+import "core:time"
 
 // Notify triggers a notification using OSC777.
 notify :: proc(title, body: string) {

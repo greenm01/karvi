@@ -62,9 +62,9 @@ color :: proc(p: Profile, s: string) -> ^Color {
 	} else {
 		i := strconv.atoi(s)
 		if i < 16 {
-			c = new_ansi_color(i, s)
+			c = new_ansi_color(i)
 		} else {
-			c = new_ansi256_color(i, s)
+			c = new_ansi256_color(i)
 		}
 	}
 

@@ -63,13 +63,6 @@ when ODIN_OS == .Linux {
       return int(wait_data(c.int(fd), c.long(usec)))
    }
 
-   /*
-   get_env :: proc(key: string) -> string {
-      env := cstring(libc.getenv(strings.clone_to_cstring(key)))
-      return string(env)
-   }
-   */
-
    get_env_slice :: proc() -> []string {
       e := make([dynamic]string)
       defer delete(e)
@@ -92,13 +85,8 @@ when ODIN_OS == .Linux {
    }
 
    main :: proc() {
-  
       //env := get_env_slice()
       //for e in env do fmt.println(e)
-
-      fmt.println("****************************")
-      fmt.println("****************************")
-      fmt.println("****************************")
 
       env := get_env_slice2()
       for e in env do fmt.println(e)
@@ -106,7 +94,7 @@ when ODIN_OS == .Linux {
       enable_raw_mode()
       defer disable_raw_mode()
       
-      fmt.print("waiting for terminal data...")
+      fmt.print("query terminal and wait for response...")
       // query the cursor position
       fd := os.stdout
       fmt.fprintf(fd, "\e[6n")
@@ -116,7 +104,7 @@ when ODIN_OS == .Linux {
 
       fmt.println("COLORFGBG = ", get_env(cstring("COLORFGBG")))
 
-      fmt.println("is atty?", is_atty(os.stdout))
+      fmt.println("is atty?", (is_atty(os.stdout) == 1 ? "yes" : "no"))
 
    }
 }

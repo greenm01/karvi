@@ -15,7 +15,7 @@ BACKGROUND :: "48"
 // Color is an interface implemented by all colors that can be converted to an
 // ANSI sequence.
 Color :: struct {
-	color: string,
+	color: string,  // hex color
 	type: union {No_Color, ANSI_Color, ANSI256_Color, RGB_Color},
 }
 
@@ -41,15 +41,15 @@ ANSI_Color :: struct {
 	c: int,
 }
 
-new_ansi_color :: proc(c: int, s: string) -> ^Color {
+new_ansi_color :: proc(c: int) -> ^Color {
 	color := new(Color)
-	color.color = s
+	color.color = ansi_hex[c]
 	color.type = ANSI_Color{color, c}
 	return color	
 }
 	
 ansi_string :: proc(c: ANSI_Color) -> (str: string) {
-	return ansi_hex[c.c]
+	return c.color
 }
 
 // ANSI256_Color is a color (16-255) as defined by the ANSI Standard.
@@ -58,15 +58,15 @@ ANSI256_Color :: struct {
 	c: int,
 }
 
-new_ansi256_color :: proc(c: int, s: string) -> ^Color {
+new_ansi256_color :: proc(c: int) -> ^Color {
 	color := new(Color)
-	color.color = s
+	color.color = ansi_hex[c]
 	color.type = ANSI256_Color{color, c}
 	return color	
 }
 	
 ansi256_string :: proc(c: ANSI256_Color) -> (str: string) {
-	return ansi_hex[c.c]
+	return c.color
 }
 
 // RGB is a hex-encoded color, e.g. "#abcdef".
@@ -237,7 +237,7 @@ ansi256_to_ansi :: proc(c: ANSI256_Color) -> ^Color {
 		}
 	}
 
-	return new_ansi_color(r, c.color)
+	return new_ansi_color(r)
 }
 
 hex_to_ansi256 :: proc(c: colorful.Color) -> ^Color {
@@ -280,6 +280,6 @@ hex_to_ansi256 :: proc(c: colorful.Color) -> ^Color {
 	gray_dist := colorful.distance_hsluv(c, g2)
 
 	color_string := colorful.color_hex(c)
-	if color_dist <= gray_dist do return new_ansi256_color(16 + ci, color_string)
-	return new_ansi256_color(232 + gray_idx, color_string)
+	if color_dist <= gray_dist do return new_ansi256_color(16 + ci)
+	return new_ansi256_color(232 + gray_idx)
 }

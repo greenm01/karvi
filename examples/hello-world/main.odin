@@ -45,6 +45,14 @@ main :: proc() {
 	fmt.printf("\t%s %s\n", kv.set_bold("Has background color"), kv.background_color())
 	fmt.printf("\t%s %t\n\n", kv.set_bold("Has dark background?"), kv.has_dark_background())
 
+	hw := "Hello, world!"
+	kv.copy(hw)
+	fmt.printf("\t%q copied to system clipboard\n\n", hw)
+
+	kv.notify("Termenv", hw)
+	fmt.print("\tTriggered a notification\n")
+
+	fmt.printf("\t%s\n", kv.hyperlink("http://example.com", "This is a link"))
 }
 
 /*

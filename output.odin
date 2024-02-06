@@ -1,5 +1,6 @@
 package karvi
 
+import "core:fmt"  // TODO: remove
 import "core:io"
 import "core:os"
 import "core:sync"
@@ -37,14 +38,14 @@ Environ :: struct {
 }
 
 new_environ :: proc() -> Environ {
-	return Environ{environ, getenv}
+	return Environ{environ, get_env}
 }
 
 environ :: proc() -> []string {
 	return sys.get_env_slice2()
 }
 
-getenv :: proc(key: string) -> string {
+get_env :: proc(key: string) -> string {
 	return string(sys.get_env(strings.clone_to_cstring(key)))
 }
 
@@ -186,5 +187,5 @@ write :: proc(o: ^Output, r: []u8) -> (int, os.Errno) {
 
 // WriteString writes the given string to the output.
 write_string :: proc(o: ^Output, s: string) -> (int, os.Errno) {
-	return write(o, transmute([]u8)utf8.string_to_runes(s))
+	return os.write_string(o.w, s)
 }

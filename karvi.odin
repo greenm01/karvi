@@ -65,7 +65,11 @@ has_dark_background :: proc() -> bool {
 // If NO_COLOR is set, this will return true, ignoring CLICOLOR/CLICOLOR_FORCE
 // If CLICOLOR=="0", it will be true only if CLICOLOR_FORCE is also "0" or is unset.
 output_env_no_color :: proc(o: ^Output) -> bool {
-	return getenv("NO_COLOR") != "" || (getenv("CLICOLOR") == "0" && !cli_color_forced(o))
+	return get_env(
+		"NO_COLOR") != "" ||
+		(get_env("CLICOLOR") == "0" &&
+		!cli_color_forced(o)
+	)
 }
 
 // env_no_color returns true if the environment variables explicitly disable color output
@@ -108,7 +112,7 @@ output_env_color_profile :: proc(o: ^Output) -> Profile {
 }
 
 cli_color_forced :: proc(o: ^Output) -> bool {
-	if forced := getenv("CLICOLOR_FORCE"); forced != "" {
+	if forced := get_env("CLICOLOR_FORCE"); forced != "" {
 		return forced != "0"
 	}
 	return false

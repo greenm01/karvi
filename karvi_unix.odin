@@ -4,6 +4,7 @@ import "core:time"
 import "core:io"
 import "core:fmt"
 import "core:strings"
+import "core:strconv"
 import "core:unicode/utf8"
 import "core:os"
 import "core:c"
@@ -27,6 +28,8 @@ when ODIN_OS != .Windows {
 	}
 
 	close :: proc() {
+		// restore colors and disable raw mode
+		fmt.fprintf(output.w, "\e[0m")
 		sys.disable_raw_mode()
 	}
 
@@ -38,12 +41,12 @@ when ODIN_OS != .Windows {
 			return Ascii
 		}
 
-		if getenv("GOOGLE_CLOUD_SHELL") == "true" {
+		if get_env("GOOGLE_CLOUD_SHELL") == "true" {
 			return True_Color
 		}
 
-		term := getenv("TERM")
-		color_term := getenv("COLORTERM")
+		term := get_env("TERM")
+		color_term := get_env("COLORTERM")
 
 		switch strings.to_lower(color_term) {
 		case "24bit":
@@ -51,7 +54,7 @@ when ODIN_OS != .Windows {
 		case "truecolor":
 			if strings.has_prefix(term, "screen") {
 				// tmux supports TrueColor, screen only ANSI256
-				if getenv("TERM_PROGRAM") != "tmux" {
+				if get_env("TERM_PROGRAM") != "tmux" {
 					return ANSI256
 				}
 			}
@@ -86,13 +89,19 @@ when ODIN_OS != .Windows {
 		res, err := term_status_report(o, 10)
 		if err == 0 {
 			c, err := xterm_color(res)
-			if err == .No_Error {
+			if err == .No_Error && c.color != "#000000" {
 				return c
 			}
 		}
+		color_fgbg := get_env("COLORFGBG")
+		if strings.contains(color_fgbg, ";") {
+			c := strings.split(color_fgbg, ";")
+			i := strconv.atoi(c[0])
+			return new_ansi_color(i)
+		}
 
-		// TODO: add back env query and fallthrough
-		return new_rgb_color(xterm_color2(res, 10))
+		// default white
+		return new_ansi_color(7)
 	}
  
 	bg_color :: proc(o: ^Output) -> ^Color {
@@ -104,8 +113,16 @@ when ODIN_OS != .Windows {
 				return c
 			}
 		}
-		// TODO: add back env query and fallthrough
-		return new_rgb_color(xterm_color2(res, 11))
+
+		color_fgbg := get_env("COLORFGBG")
+		if strings.contains(color_fgbg, ";") {
+			c := strings.split(color_fgbg, ";")
+			i := strconv.atoi(c[len(c)-1])
+			return new_ansi_color(i)
+		}
+
+		// default black
+		return new_ansi_color(0)
 	}
 
 	wait_for_data :: proc(o: ^Output, timeout: time.Duration) -> Errno {
@@ -204,7 +221,7 @@ when ODIN_OS != .Windows {
 		using Error
 		// screen/tmux can't support OSC, because they can be connected to multiple
 		// terminals concurrently.
-		term := getenv("TERM")
+		term := get_env("TERM")
 		if strings.has_prefix(term, "screen") || strings.has_prefix(term, "tmux") || strings.has_prefix(term, "dumb") {
 			return "", Errno(Err_Status_Report)
 		}

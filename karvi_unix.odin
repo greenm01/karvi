@@ -150,13 +150,6 @@ when ODIN_OS != .Windows {
 		return b[0], Errno(0)
 	}
 
-	write_byte_to_string :: proc(s: string, b: byte) -> string {
-		builder := strings.builder_make()
-		strings.write_string(&builder, s)
-		strings.write_byte(&builder, b)
-		return strings.to_string(builder)
-	}
-
 	// readNextResponse reads either an OSC response or a cursor position response:
 	//   - OSC response: "\x1b]11;rgb:1111/1111/1111\x1b\\"
 	//   - cursor position response: "\x1b[42;1R"

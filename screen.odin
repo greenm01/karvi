@@ -2,29 +2,30 @@ package karvi
 
 import "core:fmt"
 import "core:strings"
+import "core:os"
 
 concat :: strings.concatenate
 
 /* Sequence definitions */
 
 // Cursor positioning.
-CursorUpSeq              :: "%dA"
-CursorDownSeq            :: "%dB"
-CursorForwardSeq         :: "%dC"
-CursorBackSeq            :: "%dD"
-CursorNextLineSeq        :: "%dE"
-CursorPreviousLineSeq    :: "%dF"
-CursorHorizontalSeq      :: "%dG"
-CursorPositionSeq        :: "%d;%dH"
-EraseDisplaySeq          :: "%dJ"
-EraseLineSeq             :: "%dK"
-ScrollUpSeq              :: "%dS"
-ScrollDownSeq            :: "%dT"
+CursorUpSeq              :: "A"
+CursorDownSeq            :: "B"
+CursorForwardSeq         :: "C"
+CursorBackSeq            :: "D"
+CursorNextLineSeq        :: "E"
+CursorPreviousLineSeq    :: "F"
+CursorHorizontalSeq      :: "G"
+CursorPositionSeq        :: "H"
+EraseDisplaySeq          :: "J"
+EraseLineSeq             :: "K"
+ScrollUpSeq              :: "S"
+ScrollDownSeq            :: "T"
 SaveCursorPositionSeq    :: "s"
 RestoreCursorPositionSeq :: "u"
-ChangeScrollingRegionSeq :: "%d;%dr"
-InsertLineSeq            :: "%dL"
-DeleteLineSeq            :: "%dM"
+ChangeScrollingRegionSeq :: "r"
+InsertLineSeq            :: "L"
+DeleteLineSeq            :: "M"
 
 // Explicit values for EraseLineSeq.
 EraseLineRightSeq  :: "0K"
@@ -61,288 +62,300 @@ StartBracketedPasteSeq   :: "200~"
 EndBracketedPasteSeq     :: "201~"
 
 // Session.
-SetWindowTitleSeq     := concat([]string{"2;%s", BEL})
-SetForegroundColorSeq := concat([]string{"10;%s", BEL})
-SetBackgroundColorSeq := concat([]string{"11;%s", BEL})
-SetCursorColorSeq     := concat([]string{"12;%s", BEL})
+SetWindowTitleSeq     :: "2;"
+SetForegroundColorSeq :: "10;"
+SetBackgroundColorSeq :: "11;"
+SetCursorColorSeq     :: "12;"
 ShowCursorSeq         :: "?25h"
 HideCursorSeq         :: "?25l"
 
 // Reset the terminal to its default style, removing any active styles.
-reset :: proc(o: Output) {
-	str := concat([]string{CSI, RESET_SEQ})
-	fmt.fprint(o.w, str, "m")
+reset :: proc(o: ^Output) {
+	str := strings.concatenate([]string{CSI, RESET_SEQ, "m"})
+	os.write_string(o.w, str)
 }
 
 // SetForegroundColor sets the default foreground color.
-set_goreground_color :: proc(o: Output, color: Color) {
-	str := concat([]string{OSC, SetForegroundColorSeq})
-	fmt.fprintf(o.w, str, color)
+set_foreground_color :: proc(o: ^Output, c: ^Color) {
+	str := strings.concatenate([]string{OSC, SetForegroundColorSeq, c.color, BEL})
+	os.write_string(o.w, str)
 }
 
 // SetBackgroundColor sets the default background color.
-set_background_color :: proc(o: Output, color: Color) {
-	str := concat([]string{OSC, SetBackgroundColorSeq})
-	fmt.fprintf(o.w, str, color)
+set_background_color :: proc(o: ^Output, c: ^Color) {
+	str := strings.concatenate([]string{OSC, SetBackgroundColorSeq, c.color, BEL})
+	os.write_string(o.w, str)
 }
 
 // SetCursorColor sets the cursor color.
-set_cursor_color :: proc(o: Output, color: Color) {
-	str := concat([]string{OSC, SetCursorColorSeq})
-	fmt.fprintf(o.w, str, color)
+set_cursor_color :: proc(o: ^Output, c: ^Color) {
+	str := strings.concatenate([]string{OSC, SetCursorColorSeq, c.color, BEL})
+	os.write_string(o.w, str)
 }
 
 // RestoreScreen restores a previously saved screen state.
-restore_screen :: proc(o: Output) {
-	str := concat([]string{CSI, RestoreScreenSeq})
-	fmt.fprint(o.w, str)
+restore_screen :: proc(o: ^Output) {
+	str := strings.concatenate([]string{CSI, RestoreScreenSeq})
+	os.write_string(o.w, str)
 }
 
 // SaveScreen saves the screen state.
-save_screen :: proc(o: Output) {
-	str := concat([]string{CSI, SaveScreenSeq})
-	fmt.fprint(o.w, str)
+save_screen :: proc(o: ^Output) {
+	str := strings.concatenate([]string{CSI, SaveScreenSeq})
+	os.write_string(o.w, str)
 }
 
 // AltScreen switches to the alternate screen buffer. The former view can be
 // restored with ExitAltScreen().
-alt_screen :: proc(o: Output) {
-	str := concat([]string{CSI, AltScreenSeq})
-	fmt.fprint(o.w, str)
+alt_screen :: proc(o: ^Output) {
+	str := strings.concatenate([]string{CSI, AltScreenSeq})
+	os.write_string(o.w, str)
 }
 
 // ExitAltScreen exits the alternate screen buffer and returns to the former
 // terminal view.
-exit_alt_screen :: proc(o: Output) {
-	str := concat([]string{CSI, ExitAltScreenSeq})
-	fmt.fprint(o.w, str)
+exit_alt_screen :: proc(o: ^Output) {
+	str := strings.concatenate([]string{CSI, ExitAltScreenSeq})
+	os.write_string(o.w, str)
 }
 
 // ClearScreen clears the visible portion of the terminal.
-clear_screen :: proc(o: Output) {
-	str := concat([]string{CSI, EraseDisplaySeq})
-	fmt.fprintf(o.w, str, 2)
+clear_screen :: proc(o: ^Output) {
+	n := int_to_string(2)
+	str := strings.concatenate([]string{CSI, n, EraseDisplaySeq})
+	os.write_string(o.w, str)
 	move_cursor(o, 1, 1)
 }
 
 // MoveCursor moves the cursor to a given position.
-move_cursor :: proc(o: Output, row, column: int) {
-	str := concat([]string{CSI, CursorPositionSeq})
-	fmt.fprintf(o.w, str, row, column)
+move_cursor :: proc(o: ^Output, row, column: int) {
+	row := int_to_string(row)
+	column := int_to_string(column)
+	str := strings.concatenate([]string{CSI, row, ";", column, CursorPositionSeq})
+	os.write_string(o.w, str)
 }
 
 // HideCursor hides the cursor.
-hide_cursor :: proc(o: Output) {
-	str := concat([]string{CSI, HideCursorSeq})
-	fmt.fprint(o.w, str)
+hide_cursor :: proc(o: ^Output) {
+	str := strings.concatenate([]string{CSI, HideCursorSeq})
+	os.write_string(o.w, str)
 }
 
 // ShowCursor shows the cursor.
-show_cursor :: proc(o: Output) {
-	str := concat([]string{CSI, ShowCursorSeq})
-	fmt.fprint(o.w, str)
+show_cursor :: proc(o: ^Output) {
+	str := strings.concatenate([]string{CSI, ShowCursorSeq})
+	os.write_string(o.w, str)
 }
 
 // SaveCursorPosition saves the cursor position.
-save_cursor_position :: proc(o: Output) {
-	str := concat([]string{CSI, SaveCursorPositionSeq})
-	fmt.fprint(o.w, str)
+save_cursor_position :: proc(o: ^Output) {
+	str := strings.concatenate([]string{CSI, SaveCursorPositionSeq})
+	os.write_string(o.w, str)
 }
 
 // RestoreCursorPosition restores a saved cursor position.
-restore_cursor_position :: proc(o: Output) {
-	str := concat([]string{CSI, RestoreCursorPositionSeq})
-	fmt.fprint(o.w, str)
+restore_cursor_position :: proc(o: ^Output) {
+	str := strings.concatenate([]string{CSI, RestoreCursorPositionSeq})
+	os.write_string(o.w, str)
 }
 
 // CursorUp moves the cursor up a given number of lines.
-cursor_up :: proc(o: Output, n: int) {
-	str := concat([]string{CSI, CursorUpSeq})
-	fmt.fprintf(o.w, str, n)
+cursor_up :: proc(o: ^Output, n: int) {
+	n := int_to_string(n)
+	str := strings.concatenate([]string{CSI, n, CursorUpSeq})
+	os.write_string(o.w, str)
 }
 
 // CursorDown moves the cursor down a given number of lines.
-cursor_down :: proc(o: Output, n: int) {
-	str := concat([]string{CSI, CursorDownSeq})
-	fmt.fprintf(o.w, str, n)
+cursor_down :: proc(o: ^Output, n: int) {
+	n := int_to_string(n)
+	str := strings.concatenate([]string{CSI, n, CursorDownSeq})
+	os.write_string(o.w, str)
 }
 
 // CursorForward moves the cursor up a given number of lines.
-cursor_forward :: proc(o: Output, n: int) {
-	str := concat([]string{CSI, CursorForwardSeq})
-	fmt.fprintf(o.w, str, n)
+cursor_forward :: proc(o: ^Output, n: int) {
+	n := int_to_string(n)
+	str := strings.concatenate([]string{CSI, n, CursorForwardSeq})
+	os.write_string(o.w, str)
 }
 
 // CursorBack moves the cursor backwards a given number of cells.
-cursor_back :: proc(o: Output, n: int) {
-	str := concat([]string{CSI, CursorBackSeq})
-	fmt.fprintf(o.w, str, n)
+cursor_back :: proc(o: ^Output, n: int) {
+	n := int_to_string(n)
+	str := strings.concatenate([]string{CSI, n, CursorBackSeq})
+	os.write_string(o.w, str)
 }
 
 // CursorNextLine moves the cursor down a given number of lines and places it at
 // the beginning of the line.
-cursor_nextLine :: proc(o: Output, n: int) {
-	str := concat([]string{CSI, CursorNextLineSeq})
-	fmt.fprintf(o.w, str, n)
+cursor_next_line :: proc(o: ^Output, n: int) {
+	n := int_to_string(n)
+	str := strings.concatenate([]string{CSI, n, CursorNextLineSeq})
+	os.write_string(o.w, str)
 }
 
 // CursorPrevLine moves the cursor up a given number of lines and places it at
 // the beginning of the line.
-cursor_prev_line :: proc(o: Output, n: int) {
-	str := concat([]string{CSI, CursorPreviousLineSeq})
-	fmt.fprintf(o.w, str, n)
+cursor_prev_line :: proc(o: ^Output, n: int) {
+	n := int_to_string(n)
+	str := strings.concatenate([]string{CSI, n, CursorPreviousLineSeq})
+	os.write_string(o.w, str)
 }
 
 // ClearLine clears the current line.
-clear_line :: proc(o: Output) {
-	str := concat([]string{CSI, EraseEntireLineSeq})
-	fmt.fprint(o.w, str)
+clear_line :: proc(o: ^Output) {
+	str := strings.concatenate([]string{CSI, EraseEntireLineSeq})
+	os.write_string(o.w, str)
 }
 
 // ClearLineLeft clears the line to the left of the cursor.
-clear_line_left :: proc(o: Output) {
-	str := concat([]string{CSI, EraseLineLeftSeq})
-	fmt.fprint(o.w, str)
+clear_line_left :: proc(o: ^Output) {
+	str := strings.concatenate([]string{CSI, EraseLineLeftSeq})
+	os.write_string(o.w, str)
 }
 
 // ClearLineRight clears the line to the right of the cursor.
-clear_line_right :: proc(o: Output) {
-	str := concat([]string{CSI, EraseLineRightSeq})
-	fmt.fprint(o.w, str)
+clear_line_right :: proc(o: ^Output) {
+	str := strings.concatenate([]string{CSI, EraseLineRightSeq})
+	os.write_string(o.w, str)
 }
 
 // ClearLines clears a given number of lines.
-clear_lines :: proc(o: Output, n: int) {
-	str := concat([]string{CSI, EraseLineSeq})
-	clear_line := fmt.tprintf(str, 2)
-	str = concat([]string{CSI, CursorUpSeq})
-	cursor_up := fmt.tprintf(str, 1)
-	str = concat([]string{cursor_up, clear_line})
-	str = concat([]string{clear_line, strings.repeat(str, n)})
-	fmt.fprint(o.w, str)
+clear_lines :: proc(o: ^Output, n: int) {
+	x := int_to_string(2); y := int_to_string(1)
+	clear_line := strings.concatenate([]string{CSI, x, EraseLineSeq})
+	cursor_up := strings.concatenate([]string{CSI, y, CursorUpSeq})
+	str := strings.concatenate([]string{cursor_up, clear_line})
+	str = strings.concatenate([]string{clear_line, strings.repeat(str, n)})
+	os.write_string(o.w, str)
 }
 
 // ChangeScrollingRegion sets the scrolling region of the terminal.
-change_scrolling_region :: proc(o: Output, top, bottom: int) {
-	str := concat([]string{CSI, ChangeScrollingRegionSeq})
-	fmt.fprintf(o.w, str, top, bottom)
+change_scrolling_region :: proc(o: ^Output, top, bottom: int) {
+	top := int_to_string(top)
+	bottom := int_to_string(bottom)
+ 	str := strings.concatenate([]string{CSI, top, ";", bottom, ChangeScrollingRegionSeq})
+	os.write_string(o.w, str)
 }
 
 // InsertLines inserts the given number of lines at the top of the scrollable
 // region, pushing lines below down.
-insert_lines :: proc(o: Output, n: int) {
-	str := concat([]string{CSI, InsertLineSeq})
-	fmt.fprintf(o.w, str, n)
+insert_lines :: proc(o: ^Output, n: int) {
+	n := int_to_string(n)
+	str := strings.concatenate([]string{CSI, n, InsertLineSeq})
+	os.write_string(o.w, str)
 }
 
 // DeleteLines deletes the given number of lines, pulling any lines in
 // the scrollable region below up.
-delete_lines :: proc(o: Output, n: int) {
-	str := concat([]string{CSI, DeleteLineSeq})
-	fmt.fprintf(o.w, str, n)
+delete_lines :: proc(o: ^Output, n: int) {
+	n := int_to_string(n)
+	str := strings.concatenate([]string{CSI, n, DeleteLineSeq})
+	os.write_string(o.w, str)
 }
 
 // EnableMousePress enables X10 mouse mode. Button press events are sent only.
-enable_mouse_press :: proc(o: Output) {
-	str := concat([]string{CSI, EnableMousePressSeq})
-	fmt.fprint(o.w, str)
+enable_mouse_press :: proc(o: ^Output) {
+	str := strings.concatenate([]string{CSI, EnableMousePressSeq})
+	os.write_string(o.w, str)
 }
 
 // DisableMousePress disables X10 mouse mode.
-disable_mouse_press :: proc(o: Output) {
-	str := concat([]string{CSI, DisableMousePressSeq})
-	fmt.fprint(o.w, str)
+disable_mouse_press :: proc(o: ^Output) {
+	str := strings.concatenate([]string{CSI, DisableMousePressSeq})
+	os.write_string(o.w, str)
 }
 
 // EnableMouse enables Mouse Tracking mode.
-enable_mouse :: proc(o: Output) {
-	str := concat([]string{CSI, EnableMouseSeq})
-	fmt.fprint(o.w, str)
+enable_mouse :: proc(o: ^Output) {
+	str := strings.concatenate([]string{CSI, EnableMouseSeq})
+	os.write_string(o.w, str)
 }
 
 // DisableMouse disables Mouse Tracking mode.
-disable_mouse :: proc(o: Output) {
-	str := concat([]string{CSI, DisableMouseSeq})
-	fmt.fprint(o.w, str)
+disable_mouse :: proc(o: ^Output) {
+	str := strings.concatenate([]string{CSI, DisableMouseSeq})
+	os.write_string(o.w, str)
 }
 
 // EnableMouseHilite enables Hilite Mouse Tracking mode.
-enable_mouse_hilite :: proc(o: Output) {
-	str := concat([]string{CSI, EnableMouseHiliteSeq})
-	fmt.fprint(o.w, str)
+enable_mouse_hilite :: proc(o: ^Output) {
+	str := strings.concatenate([]string{CSI, EnableMouseHiliteSeq})
+	os.write_string(o.w, str)
 }
 
 // DisableMouseHilite disables Hilite Mouse Tracking mode.
-disable_mouse_hilite :: proc(o: Output) {
-	str := concat([]string{CSI, DisableMouseHiliteSeq})
-	fmt.fprint(o.w, str)
+disable_mouse_hilite :: proc(o: ^Output) {
+	str := strings.concatenate([]string{CSI, DisableMouseHiliteSeq})
+	os.write_string(o.w, str)
 }
 
 // EnableMouseCellMotion enables Cell Motion Mouse Tracking mode.
-enable_mouse_cell_motion :: proc(o: Output) {
-	str := concat([]string{CSI, EnableMouseCellMotionSeq})
-	fmt.fprint(o.w, str)
+enable_mouse_cell_motion :: proc(o: ^Output) {
+	str := strings.concatenate([]string{CSI, EnableMouseCellMotionSeq})
+	os.write_string(o.w, str)
 }
 
 // DisableMouseCellMotion disables Cell Motion Mouse Tracking mode.
-disable_mouse_cell_motion :: proc(o: Output) {
-	str := concat([]string{CSI, DisableMouseCellMotionSeq})
-	fmt.fprint(o.w, str)
+disable_mouse_cell_motion :: proc(o: ^Output) {
+	str := strings.concatenate([]string{CSI, DisableMouseCellMotionSeq})
+	os.write_string(o.w, str)
 }
 
 // EnableMouseAllMotion enables All Motion Mouse mode.
-enable_mouse_all_motion :: proc(o: Output) {
-	str := concat([]string{CSI, EnableMouseAllMotionSeq})
-	fmt.fprint(o.w, str)
+enable_mouse_all_motion :: proc(o: ^Output) {
+	str := strings.concatenate([]string{CSI, EnableMouseAllMotionSeq})
+	os.write_string(o.w, str)
 }
 
 // DisableMouseAllMotion disables All Motion Mouse mode.
-disable_mouse_all_motion :: proc(o: Output) {
-	str := concat([]string{CSI, DisableMouseAllMotionSeq})
-	fmt.fprint(o.w, str)
+disable_mouse_all_motion :: proc(o: ^Output) {
+	str := strings.concatenate([]string{CSI, DisableMouseAllMotionSeq})
+	os.write_string(o.w, str)
 }
 
 // EnableMouseExtendedMotion enables Extended Mouse mode (SGR). This should be
 // enabled in conjunction with EnableMouseCellMotion, and EnableMouseAllMotion.
-enable_mouse_extended_mode :: proc(o: Output) {
-	str := concat([]string{CSI, EnableMouseExtendedModeSeq})
-	fmt.fprint(o.w, str)
+enable_mouse_extended_mode :: proc(o: ^Output) {
+	str := strings.concatenate([]string{CSI, EnableMouseExtendedModeSeq})
+	os.write_string(o.w, str)
 }
 
 // DisableMouseExtendedMotion disables Extended Mouse mode (SGR).
-disable_mouse_extended_mode :: proc(o: Output) {
-	str := concat([]string{CSI, DisableMouseExtendedModeSeq})
-	fmt.fprint(o.w, str)
+disable_mouse_extended_mode :: proc(o: ^Output) {
+	str := strings.concatenate([]string{CSI, DisableMouseExtendedModeSeq})
+	os.write_string(o.w, str)
 }
 
 // EnableMousePixelsMotion enables Pixel Motion Mouse mode (SGR-Pixels). This
 // should be enabled in conjunction with EnableMouseCellMotion, and
 // EnableMouseAllMotion.
-enable_mouse_pixels_mode :: proc(o: Output) {
-	str := concat([]string{CSI, EnableMousePixelsModeSeq})
-	fmt.fprint(o.w, str)
+enable_mouse_pixels_mode :: proc(o: ^Output) {
+	str := strings.concatenate([]string{CSI, EnableMousePixelsModeSeq})
+	os.write_string(o.w, str)
 }
 
 // DisableMousePixelsMotion disables Pixel Motion Mouse mode (SGR-Pixels).
-disable_mouse_pixels_mode :: proc(o: Output) {
-	str := concat([]string{CSI, DisableMousePixelsModeSeq})
-	fmt.fprint(o.w, str)
+disable_mouse_pixels_mode :: proc(o: ^Output) {
+	str := strings.concatenate([]string{CSI, DisableMousePixelsModeSeq})
+	os.write_string(o.w, str)
 }
 
 // SetWindowTitle sets the terminal window title.
-set_window_title :: proc(o: Output, title: string) {
-	str := concat([]string{OSC, SetWindowTitleSeq})
-	fmt.fprintf(o.w, str, title)
+set_window_title :: proc(o: ^Output, title: string) {
+	str := strings.concatenate([]string{OSC, SetWindowTitleSeq, title, BEL})
+	os.write_string(o.w, str)
 }
 
 // EnableBracketedPaste enables bracketed paste.
-enable_bracketed_paste :: proc(o: Output) {
-	str := concat([]string{CSI, EnableBracketedPasteSeq})
-	fmt.fprintf(o.w, str)
+enable_bracketed_paste :: proc(o: ^Output) {
+	str := strings.concatenate([]string{CSI, EnableBracketedPasteSeq})
+	os.write_string(o.w, str)
 }
 
 // DisableBracketedPaste disables bracketed paste.
-disable_bracketed_paste :: proc(o: Output) {
-	str := concat([]string{CSI, DisableBracketedPasteSeq})
-	fmt.fprintf(o.w, str)
+disable_bracketed_paste :: proc(o: ^Output) {
+	str := strings.concatenate([]string{CSI, DisableBracketedPasteSeq})
+	os.write_string(o.w, str)
 }

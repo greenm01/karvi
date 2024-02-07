@@ -32,7 +32,7 @@ ST : string : "\e\\"
 
 is_tty :: proc(o: ^Output) -> bool {
 	if o.assume_tty || o.unsafe do return true
-	if len(o.environ.get_env("CI")) > 0 do	return false
+	if len(get_env("CI")) > 0 do	return false
 	fd := writer(o)
 	if sys.is_atty(fd) == 1 do return true
 	return false

@@ -10,19 +10,12 @@ import sys "syscalls"
 import "colorful"
 
 // output is the default global output.
-output := new_output(os.stdout, os.stdin, os.stderr)
-
-// Output_Option sets an option on Output.
-Output_Option :: proc(^Output)
+output := new_output(os.stdout)
 
 // Output is a terminal output.
 Output :: struct {
-	profile: Profile,
-	w:       os.Handle,  // writer
-	r:       os.Handle,  // reader
-	e:       os.Handle,  // error
-	environ: Environ,
-
+	profile:    Profile,
+	w:          os.Handle,  // writer
 	assume_tty: bool,
 	unsafe:     bool,
 	cache:      bool,
@@ -32,14 +25,16 @@ Output :: struct {
 	bg_color:   ^Color,
 }
 
-// Environ is an interface for getting environment variables.
-Environ :: struct {
-	environ: proc() -> []string,
-	get_env: proc(string) -> string,
-}
-
-new_environ :: proc() -> Environ {
-	return Environ{environ, get_env}
+// new_output returns a new Output for the given writer.
+new_output :: proc(w: os.Handle) -> (o: ^Output) {
+	using Profile
+	o = new(Output)
+	o.w          = w
+	o.profile    = output_env_color_profile(o)      
+	o.fg_color   = new_no_color()
+	o.bg_color   = new_no_color()
+	o.unsafe     = false
+	return
 }
 
 environ :: proc() -> []string {
@@ -58,76 +53,6 @@ default_output :: proc() -> ^Output {
 // SetDefaultOutput sets the default global output.
 set_default_output :: proc(o: ^Output) {
 	output = o
-}
-
-// new_output returns a new Output for the given writer.
-new_output :: proc(w, r, e: os.Handle, opts: ..Output_Option) -> ^Output {
-	using Profile
-	o := new(Output)
-	o.w          = w
-	o.r          = r
-	o.e          = e
-	o.environ    = new_environ()
-	o.profile    = Undefined      
-	o.fg_color   = new_no_color()
-	o.bg_color   = new_no_color()
-	o.unsafe     = false
-
-	for opt in opts do opt(o)
-
-	if o.profile == Undefined {
-		o.profile = output_env_color_profile(o)
-	}
-
-	return o
-}
-
-/*
-// WithEnvironment returns a new Output_Option for the given environment.
-with_environment :: proc(environ: Environ) -> Output_Option {
-	return proc(o: ^Output) {
-		o.environ = environ
-	}
-}
-
-// WithProfile returns a new Output_Option for the given profile.
-with_profile :: proc(profile: Profile) -> Output_Option {
-	return proc(o: ^Output) {
-		o.profile = profile
-	}
-}
-
-// WithColorCache returns a new Output_Option with fore- and background color values
-// pre-fetched and cached.
-with_color_cache :: proc(v: bool) -> Output_Option {
-	return proc(o: ^Output) {
-		o.cache = v
-
-		// cache the values now
-		_ = foreground_color(o)
-		_ = background_color(o)
-	}
-}
-
-// WithTTY returns a new Output_Option to assume whether or not the output is a TTY.
-// This is useful when mocking console output.
-with_tty :: proc(v: bool) -> Output_Option {
-	return proc(o: ^Output) {
-		o.assume_tty = v
-	}
-}
-*/
-// WithUnsafe returns a new Output_Option with unsafe mode enabled. Unsafe mode doesn't
-// check whether or not the terminal is a TTY.
-//
-// This option supersedes WithTTY.
-//
-// This is useful when mocking console output and enforcing ANSI escape output
-// e.g. on SSH sessions.
-with_unsafe :: proc() -> Output_Option {
-	return proc(o: ^Output) {
-		o.unsafe = true
-	}
 }
 
 // ForegroundColor returns the terminal's default foreground color.

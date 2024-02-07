@@ -53,10 +53,8 @@ TestReset :: proc(t: ^testing.T) {
 @(test)
 TestSetForegroundColor :: proc(t: ^testing.T) {
 	o := temp_output(t)
-	kv.init()
 	kv.set_foreground_color(o, kv.new_ansi_color(0))
 	verify(t, o, "\x1b]10;#000000\a")
-	kv.close()
 }
 
 @(test)

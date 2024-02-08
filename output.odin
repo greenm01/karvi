@@ -98,7 +98,7 @@ output_bg_color :: proc(o: ^Output) -> ^Color {
 
 // HasDarkBackground returns whether terminal uses a dark-ish background.
 output_has_dark_bg :: proc(o: ^Output) -> bool {
-	c := convert_to_rgb(output_bg_color(o))
+	c := convert_to_hex(output_bg_color(o))
 	_, _, l := colorful.hsl(c)
 	return l < 0.5
 }

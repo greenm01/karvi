@@ -19,7 +19,7 @@ main :: proc() {
 
 		// background color
 		bg := kv.color(p, fmt.tprintf("%d", i))
-		out := kv.new_style(fmt.tprintf(" %2d %s ", i, kv.hex(bg)))
+		out := kv.new_style(fmt.tprintf(" %2d %s ", i, bg.color))
 
 		// apply colors
 		if i < 5 {
@@ -42,7 +42,7 @@ main :: proc() {
 
 		// background color
 		bg := kv.color(p, fmt.tprintf("%d", i))
-		out := kv.new_style(fmt.tprintf(" %3d %s ", i, kv.hex(bg)))
+		out := kv.new_style(fmt.tprintf(" %3d %s ", i, bg.color))
 
 		// apply colors
 		if i < 28 {
@@ -65,7 +65,7 @@ main :: proc() {
 
 		// background color
 		bg := kv.color(p, fmt.tprintf("%d", i))
-		out := kv.new_style(fmt.tprintf(" %3d %s ", i, kv.hex(bg)))
+		out := kv.new_style(fmt.tprintf(" %3d %s ", i, bg.color))
 
 		// apply colors
 		if i < 244 {

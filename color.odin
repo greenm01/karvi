@@ -19,6 +19,16 @@ Color :: struct {
 	type: union {No_Color, ANSI_Color, ANSI256_Color, RGB_Color},
 }
 
+// create a new colorful hex color
+// TODO: Add colorful.Color to API above?
+// May be confusing becase RGB_Color is a hex string internally
+// while a colorful.Color is abtually defined (r,g,b)
+// Define an RGB color with (r,g,b) too?
+new_hex_color :: proc(s: string) -> (color: colorful.Color) {
+	color, _ = colorful.hex(s)
+	return
+}
+
 // No_Color is a nop for terminals that don't support colors.
 No_Color :: struct {
 	using clr: ^Color,
@@ -83,8 +93,7 @@ new_rgb_color :: proc(c: string) -> ^Color {
 }
 
 // ConvertToRGB converts a Color to a colorful.Color.
-convert_to_rgb :: proc(c: ^Color) -> colorful.Color {
-	using Profile
+convert_to_hex :: proc(c: ^Color) -> colorful.Color {
 	hex: string
 	switch v in c.type {
 	case RGB_Color:
@@ -102,15 +111,14 @@ convert_to_rgb :: proc(c: ^Color) -> colorful.Color {
 }
 
 // returns a hex string from a color
-hex :: proc(c: ^Color) -> string {
-	return colorful.color_hex(convert_to_rgb(c))
+hex :: proc(c: colorful.Color) -> string {
+	return colorful.color_hex(c)
 }
 
 sequence :: proc(color: ^Color, bg: bool) -> string {
-	using Profile
 	switch c in color.type {
 	case No_Color:
-		return no_color_sequence()
+		return ""
 	case ANSI_Color:
 		return ansi_sequence(c, bg)
 	case ANSI256_Color:
@@ -118,11 +126,6 @@ sequence :: proc(color: ^Color, bg: bool) -> string {
 	case RGB_Color:
 		return rgb_sequence(c, bg)
 	}
-	return ""
-}
-
-// Sequence returns the ANSI Sequence for the color.
-no_color_sequence :: proc() -> string {
 	return ""
 }
 

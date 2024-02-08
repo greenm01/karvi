@@ -24,11 +24,10 @@ Style :: struct {
 }
 
 // new_style returns a new Style.
-new_style :: proc(s: ..string) -> (style: ^Style) {
-	using Profile
+new_style :: proc(s: string, profile := Profile.ANSI) -> (style: ^Style) {
 	style = new(Style)
-	style.profile = ANSI
-	style.str = strings.join(s, " ")
+	style.profile = profile
+	style.str = s
 	style.styles = make([dynamic]string)
 	return
 }
@@ -45,35 +44,35 @@ get_string :: proc(t: ^Style) -> string {
 set_bold :: proc(s: string) -> string {
 	style := new_style(s)
 	defer del_style(style)
-	bold(style)
+	enable_bold(style)
 	return get_string(style)
 }
 
 set_faint :: proc(s: string) -> string {
 	style := new_style(s)
 	defer del_style(style)
-	faint(style)
+	enable_faint(style)
 	return get_string(style)
 }
 
 set_italic :: proc(s: string) -> string {
 	style := new_style(s)
 	defer del_style(style)
-	italic(style)
+	enable_italic(style)
 	return get_string(style)
 }
 
 set_underline :: proc(s: string) -> string {
 	style := new_style(s)
 	defer del_style(style)
-	underline(style)
+	enable_underline(style)
 	return get_string(style)
 }
 
 set_crossout :: proc(s: string) -> string {
 	style := new_style(s)
 	defer del_style(style)
-	crossout(style)
+	enable_crossout(style)
 	return get_string(style)
 }
 
@@ -133,42 +132,42 @@ styled :: proc(t: ^Style, s: string) -> string {
 }
 
 // bold enables bold rendering.
-bold :: proc(t: ^Style) {
+enable_bold :: proc(t: ^Style) {
 	append(&t.styles, BOLD_SEQ)
 }
 
 // faint enables faint rendering.
-faint :: proc(t: ^Style) {
+enable_faint :: proc(t: ^Style) {
 	append(&t.styles, FAINT_SEQ)
 }
 
 // italic enables italic rendering.
-italic :: proc(t: ^Style) {
+enable_italic :: proc(t: ^Style) {
 	append(&t.styles, ITALIC_SEQ)
 }
 
 // underline enables underline rendering.
-underline :: proc(t: ^Style) {
+enable_underline :: proc(t: ^Style) {
 	append(&t.styles, UNDERLINE_SEQ)
 }
 
 // overline enables overline rendering.
-overline :: proc(t: ^Style) {
+enable_overline :: proc(t: ^Style) {
 	append(&t.styles, OVERLINE_SEQ)
 }
 
 // blink enables blink mode.
-blink :: proc(t: ^Style) {
+enable_blink :: proc(t: ^Style) {
 	append(&t.styles, BLINK_SEQ)
 }
 
 // reverse enables reverse color mode.
-reverse :: proc(t: ^Style) {
+enable_reverse :: proc(t: ^Style) {
 	append(&t.styles, REVERSE_SEQ)
 }
 
 // cross_out enables crossed-out rendering.
-crossout :: proc(t: ^Style) {
+enable_crossout :: proc(t: ^Style) {
 	append(&t.styles, CROSSOUT_SEQ)
 }
 

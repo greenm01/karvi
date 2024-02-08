@@ -36,7 +36,7 @@ profile_convert :: proc(p: Profile, c: ^Color) -> ^Color {
 		if p == ANSI do	return ansi256_to_ansi(v)
 		return v
 	case RGB_Color:
-		h, err := colorful.hex(v.c)
+		h, err := colorful.hex(v.color)
 		if err != 0 do return nil
 		if p != True_Color {
 			ac := hex_to_ansi256(h)

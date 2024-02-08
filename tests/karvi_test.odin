@@ -60,8 +60,8 @@ test_rende_ring :: proc(t: ^testing.T) {
 	test := kv.get_string(out) == "foobar" 
 	expect(t, test, "Unstyled strings should be returned as plain text")
 
-	kv.set_style_foreground(out, kv.new_rgb_color("#abcdef"))
-	kv.set_style_background(out, kv.new_ansi256_color(69))
+	kv.set_style_foreground(out, kv.color(True_Color, "#abcdef"))
+	kv.set_style_background(out, kv.color(True_Color, "69"))
 	kv.enable_bold(out)
 	kv.enable_italic(out)
 	kv.enable_faint(out)
@@ -83,9 +83,10 @@ test_rende_ring :: proc(t: ^testing.T) {
 
 @(test)
 test_color_conversion :: proc(t: ^testing.T) {
+	using kv.Profile
 	// ANSI color
-	a := kv.new_ansi_color(7)
-	c := kv.convert_to_hex(a)
+	a := kv.color(ANSI, "7")
+	c := kv.convert_to_rgb(a)
 
 	exp := "#c0c0c0"
 	test := kv.hex(c) == exp 
@@ -93,8 +94,8 @@ test_color_conversion :: proc(t: ^testing.T) {
 	expect(t, test, err)
 
 	// ANSI-256 color
-	a256 := kv.new_ansi256_color(91)
-	c = kv.convert_to_hex(a256)
+	a256 := kv.color(ANSI256, "91")
+	c = kv.convert_to_rgb(a256)
 
 	exp = "#8700af"
 	test = kv.hex(c) == exp 
@@ -102,133 +103,145 @@ test_color_conversion :: proc(t: ^testing.T) {
 	expect(t, test, err)
 
 	// hex color
-	hex := "#87ff00"
-	argb := kv.new_hex_color(hex)
-	clr := kv.hex_to_ansi256(argb)
-	test = clr.color == hex
-	err = fmt.tprintf("Expected %s, got %s", hex, clr.color)
+	hex := "#abcdef"
+	argb := kv.color(True_Color, hex)
+	c = kv.convert_to_rgb(argb)
+	test = kv.hex(c) == hex
+	err = fmt.tprintf("Expected %s, got %s", hex, kv.hex(c))
+	expect(t, test, err)
+}
+
+@(test)
+test_ascii :: proc(t: ^testing.T) {
+	using kv.Profile
+	c := kv.color(Ascii, "#abcdef")
+	test := kv.sequence(c, false) == "" 
+	err := fmt.tprintf("Expected empty sequence, got %s", kv.sequence(c, false))
+	expect(t, test, err)
+}
+
+@(test)
+test_ansi_profile :: proc(t: ^testing.T) {
+	using kv.Profile
+	p := ANSI
+
+	c := kv.color(p, "#e88388")
+	exp := "91"
+	test := kv.sequence(c, false) == exp 
+	err := fmt.tprintf("Expected %s, got %s", exp, kv.sequence(c, false))
+	expect(t, test, err)
+
+	_, test = c.type.(kv.ANSI_Color) 
+	err = fmt.tprintf("Expected type karvi.ANSI_Color, got %T", c)
+	expect(t, test, err)
+
+	c = kv.color(p, "82")
+	exp = "92"
+	test = kv.sequence(c, false) == exp
+	err = fmt.tprintf("Expected %s, got %s", exp, kv.sequence(c, false))
+	expect(t, test, err)
+	
+	_, test = c.type.(kv.ANSI_Color)
+	err = fmt.tprintf("Expected type karvi.ANSI_Color, got %T", c)
+	expect(t, test, err)
+	
+	c = kv.color(p, "2")
+	exp = "32"
+	test = kv.sequence(c, false) == exp
+	err = fmt.tprintf("Expected %s, got %s", exp, kv.sequence(c, false))
+	expect(t, test, err)
+
+	_, test = c.type.(kv.ANSI_Color)
+	err = fmt.tprintf("Expected type karvi.ANSI_Color, got %T", c)
+	expect(t, test, err)
+}
+
+@(test)
+test_ansi256_profile :: proc(t: ^testing.T) {
+	using kv.Profile
+	p := ANSI256
+
+	c := kv.color(p, "#abcdef")
+	exp := "38;5;153"
+	test := kv.sequence(c, false) == exp
+	err := fmt.tprintf("Expected %s, got %s", exp, kv.sequence(c, false))
+	expect(t, test, err)
+
+	_, test = c.type.(kv.ANSI256_Color)
+	err = fmt.tprintf("Expected type karvi.ANSI256_Color, got %T", c)
+	expect(t, test, err)
+
+	c = kv.color(p, "139")
+	exp = "38;5;139"
+	test = kv.sequence(c, false) == exp
+	err = fmt.tprintf("Expected %s, got %s", exp, kv.sequence(c, false))
+	expect(t, test, err)
+	
+	_, test = c.type.(kv.ANSI256_Color)
+	err = fmt.tprintf("Expected type karvi.ANSI256_Color, got %T", c)
+	expect(t, test, err)
+	
+	c = kv.color(p, "2")
+	exp = "32"
+	test = kv.sequence(c, false) == exp
+	err = fmt.tprintf("Expected %s, got %s", exp, kv.sequence(c, false))
+	expect(t, test, err)
+	
+	_, test = c.type.(kv.ANSI_Color)
+	err = fmt.tprintf("Expected type termenv.ANSIColor, got %T", c)
+	expect(t, test, err)
+}
+
+@(test)
+test_true_color_profile :: proc(t: ^testing.T) {
+	using kv.Profile
+	p := True_Color
+
+	c := kv.color(p, "#abcdef")
+	exp := "38;2;171;205;239"
+	test := kv.sequence(c,  false) == exp
+	err := fmt.tprintf("Expected %s, got %s", exp, kv.sequence(c,  false))
+	expect(t, test, err)
+	
+	_, test = c.type.(kv.RGB_Color)
+	err = fmt.tprintf("Expected type karvi.Hex_Color, got %T", c)
+	expect(t, test, err)
+
+	c = kv.color(p, "139")
+	exp = "38;5;139"
+	test = kv.sequence(c, false) == exp
+	err = fmt.tprintf("Expected %s, got %s", exp, kv.sequence(c, false))
+	expect(t, test, err)
+
+	_, test = c.type.(kv.ANSI256_Color)
+	err = fmt.tprintf("Expected type karvi.ANSI256_Color, got %T", c)
+	expect(t, test, err)
+
+	c = kv.color(p, "2")
+	exp = "32"
+	test = kv.sequence(c, false) == exp
+	err = fmt.tprintf("Expected %s, got %s", exp, kv.sequence(c, false))
+	expect(t, test, err)
+	
+	_, test = c.type.(kv.ANSI_Color)
+	err = fmt.tprintf("Expected type karvi.ANSI_Color, got %T", c)
+	expect(t, test, err)
+	
+}
+
+@(test)
+test_styles :: proc(t: ^testing.T) {
+	using kv.Profile
+	s := kv.set_foreground("foobar", kv.color(True_Color, "2"))
+
+	exp := "\x1b[32mfoobar\x1b[0m"
+	test := s == exp
+	err := fmt.tprintf("Expected %s, got %s", exp, s)
 	expect(t, test, err)
 }
 
 /*
-func TestFromColor(t *testing.T) {
-	// color.Color interface
-	c := TrueColor.FromColor(color.RGBA{255, 128, 0, 255})
-	exp := "38;2;255;128;0"
-	if c.Sequence(false) != exp {
-		t.Errorf("Expected %s, got %s", exp, c.Sequence(false))
-	}
-}
-
-func TestAscii(t *testing.T) {
-	c := Ascii.Color("#abcdef")
-	if c.Sequence(false) != "" {
-		t.Errorf("Expected empty sequence, got %s", c.Sequence(false))
-	}
-}
-
-func TestANSIProfile(t *testing.T) {
-	p := ANSI
-
-	c := p.Color("#e88388")
-	exp := "91"
-	if c.Sequence(false) != exp {
-		t.Errorf("Expected %s, got %s", exp, c.Sequence(false))
-	}
-	if _, ok := c.(ANSIColor); !ok {
-		t.Errorf("Expected type termenv.ANSIColor, got %T", c)
-	}
-
-	c = p.Color("82")
-	exp = "92"
-	if c.Sequence(false) != exp {
-		t.Errorf("Expected %s, got %s", exp, c.Sequence(false))
-	}
-	if _, ok := c.(ANSIColor); !ok {
-		t.Errorf("Expected type termenv.ANSIColor, got %T", c)
-	}
-
-	c = p.Color("2")
-	exp = "32"
-	if c.Sequence(false) != exp {
-		t.Errorf("Expected %s, got %s", exp, c.Sequence(false))
-	}
-	if _, ok := c.(ANSIColor); !ok {
-		t.Errorf("Expected type termenv.ANSIColor, got %T", c)
-	}
-}
-
-func TestANSI256Profile(t *testing.T) {
-	p := ANSI256
-
-	c := p.Color("#abcdef")
-	exp := "38;5;153"
-	if c.Sequence(false) != exp {
-		t.Errorf("Expected %s, got %s", exp, c.Sequence(false))
-	}
-	if _, ok := c.(ANSI256Color); !ok {
-		t.Errorf("Expected type termenv.ANSI256Color, got %T", c)
-	}
-
-	c = p.Color("139")
-	exp = "38;5;139"
-	if c.Sequence(false) != exp {
-		t.Errorf("Expected %s, got %s", exp, c.Sequence(false))
-	}
-	if _, ok := c.(ANSI256Color); !ok {
-		t.Errorf("Expected type termenv.ANSI256Color, got %T", c)
-	}
-
-	c = p.Color("2")
-	exp = "32"
-	if c.Sequence(false) != exp {
-		t.Errorf("Expected %s, got %s", exp, c.Sequence(false))
-	}
-	if _, ok := c.(ANSIColor); !ok {
-		t.Errorf("Expected type termenv.ANSIColor, got %T", c)
-	}
-}
-
-func TestTrueColorProfile(t *testing.T) {
-	p := TrueColor
-
-	c := p.Color("#abcdef")
-	exp := "38;2;171;205;239"
-	if c.Sequence(false) != exp {
-		t.Errorf("Expected %s, got %s", exp, c.Sequence(false))
-	}
-	if _, ok := c.(RGBColor); !ok {
-		t.Errorf("Expected type termenv.HexColor, got %T", c)
-	}
-
-	c = p.Color("139")
-	exp = "38;5;139"
-	if c.Sequence(false) != exp {
-		t.Errorf("Expected %s, got %s", exp, c.Sequence(false))
-	}
-	if _, ok := c.(ANSI256Color); !ok {
-		t.Errorf("Expected type termenv.ANSI256Color, got %T", c)
-	}
-
-	c = p.Color("2")
-	exp = "32"
-	if c.Sequence(false) != exp {
-		t.Errorf("Expected %s, got %s", exp, c.Sequence(false))
-	}
-	if _, ok := c.(ANSIColor); !ok {
-		t.Errorf("Expected type termenv.ANSIColor, got %T", c)
-	}
-}
-
-func TestStyles(t *testing.T) {
-	s := String("foobar").Foreground(TrueColor.Color("2"))
-
-	exp := "\x1b[32mfoobar\x1b[0m"
-	if s.String() != exp {
-		t.Errorf("Expected %s, got %s", exp, s.String())
-	}
-}
-
+@(test)
 func TestTemplateHelpers(t *testing.T) {
 	p := TrueColor
 
@@ -317,6 +330,7 @@ func TestTemplateHelpers(t *testing.T) {
 	}
 }
 
+@(test)
 func TestEnvNoColor(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -355,6 +369,7 @@ func TestEnvNoColor(t *testing.T) {
 	}
 }
 
+@(test)
 func TestPseudoTerm(t *testing.T) {
 	buf := &bytes.Buffer{}
 	o := NewOutput(buf)
@@ -384,6 +399,7 @@ func TestPseudoTerm(t *testing.T) {
 	}
 }
 
+@(test)
 func TestCache(t *testing.T) {
 	o := NewOutput(os.Stdout, WithColorCache(true), WithProfile(TrueColor))
 
@@ -392,6 +408,7 @@ func TestCache(t *testing.T) {
 	}
 }
 
+@(test)
 func TestEnableVirtualTerminalProcessing(t *testing.T) {
 	// EnableVirtualTerminalProcessing should always return a non-nil
 	// restoreFunc, and in tests it should never return an error.
@@ -405,6 +422,7 @@ func TestEnableVirtualTerminalProcessing(t *testing.T) {
 	}
 }
 
+@(test)
 func TestWithTTY(t *testing.T) {
 	for _, v := range []bool{true, false} {
 		o := NewOutput(io.Discard, WithTTY(v))

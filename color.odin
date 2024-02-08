@@ -19,17 +19,7 @@ Color :: struct {
 	type: union {No_Color, ANSI_Color, ANSI256_Color, RGB_Color},
 }
 
-// create a new colorful hex color
-// TODO: Add colorful.Color to API above?
-// May be confusing becase RGB_Color is a hex string internally
-// while a colorful.Color is abtually defined (r,g,b)
-// Define an RGB color with (r,g,b) too?
-new_hex_color :: proc(s: string) -> (color: colorful.Color) {
-	color, _ = colorful.hex(s)
-	return
-}
-
-// No_Color is a nop for terminals that don't support colors.
+// No_Color for terminals that don't support colors.
 No_Color :: struct {
 	using clr: ^Color,
 }
@@ -39,10 +29,6 @@ new_no_color :: proc() -> ^Color {
 	color.color = ""
 	color.type = No_Color{color}
 	return color	
-}
-
-no_color_string :: proc(c: No_Color) -> string {
-	return ""
 }
 
 // ANSI is a color (0-15) as defined by the ANSI Standard.
@@ -58,10 +44,6 @@ new_ansi_color :: proc(c: int) -> ^Color {
 	return color	
 }
 	
-ansi_string :: proc(c: ANSI_Color) -> (str: string) {
-	return c.color
-}
-
 // ANSI256_Color is a color (16-255) as defined by the ANSI Standard.
 ANSI256_Color :: struct {
 	using clr: ^Color,
@@ -75,10 +57,6 @@ new_ansi256_color :: proc(c: int) -> ^Color {
 	return color	
 }
 	
-ansi256_string :: proc(c: ANSI256_Color) -> (str: string) {
-	return c.color
-}
-
 // RGB is a hex-encoded color, e.g. "#abcdef".
 RGB_Color :: struct {
 	using clr: ^Color,
@@ -92,8 +70,8 @@ new_rgb_color :: proc(c: string) -> ^Color {
 	return color
 }
 
-// ConvertToRGB converts a Color to a colorful.Color.
-convert_to_hex :: proc(c: ^Color) -> colorful.Color {
+// Converts a Color to an rgb colorful.Color.
+convert_to_rgb :: proc(c: ^Color) -> colorful.Color {
 	hex: string
 	switch v in c.type {
 	case RGB_Color:
@@ -110,7 +88,7 @@ convert_to_hex :: proc(c: ^Color) -> colorful.Color {
 	return ch
 }
 
-// returns a hex string from a color
+// returns a hex string from an rgb color
 hex :: proc(c: colorful.Color) -> string {
 	return colorful.color_hex(c)
 }
@@ -234,9 +212,9 @@ ansi256_to_ansi :: proc(c: ANSI256_Color) -> ^Color {
 	r: int
 	md := math.F64_MAX
 
-	h, _ := colorful.hex(ansi_hex[c.c])
+	h, _ := colorful.hex(c.color)
 	for i := 0; i <= 15; i += 1 {
-		hb, _ := colorful.hex(ansi_hex[c.c])
+		hb, _ := colorful.hex(ansi_hex[i])
 		d := colorful.distance_hsluv(h, hb)
 
 		if d < md {

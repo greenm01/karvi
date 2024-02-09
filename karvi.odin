@@ -31,9 +31,10 @@ OSC : string : "\e]"
 ST : string : "\e\\"
 
 is_tty :: proc(o: ^Output) -> bool {
+	if o.write_buf do return false
 	if o.assume_tty || o.unsafe do return true
 	if len(get_env("CI")) > 0 do	return false
-	fd := writer(o)
+	fd := get_writer(o)
 	if sys.is_atty(fd) == 1 do return true
 	return false
 }

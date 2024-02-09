@@ -5,17 +5,22 @@ import "core:os"
 import "core:sync"
 import "core:unicode/utf8"
 import "core:strings"
+import "core:bytes"
 
 import sys "syscalls"
 import "colorful"
 
+stdout := os.stdout
+
 // output is the default global output.
-output := new_output(os.stdout)
+output := new_output()
 
 // Output is a terminal output.
 Output :: struct {
 	profile:    Profile,
-	w:          os.Handle,  // writer
+	w:          os.Handle,
+	buf:        ^bytes.Buffer,
+	write_buf:  bool,
 	assume_tty: bool,
 	unsafe:     bool,
 	cache:      bool,
@@ -26,14 +31,22 @@ Output :: struct {
 }
 
 // new_output returns a new Output for the given writer.
-new_output :: proc(w: os.Handle) -> (o: ^Output) {
+new_output :: proc(w := stdout, buffer := false) -> (o: ^Output) {
 	using Profile
 	o = new(Output)
 	o.w          = w
 	o.profile    = output_env_color_profile(o)      
 	o.fg_color   = new_no_color()
 	o.bg_color   = new_no_color()
-	o.unsafe     = false
+
+	if buffer {
+		// assumes a pseudo terminal
+		// is_tty() returns false
+		o.profile   = Ascii
+		o.write_buf = true
+		o.buf = new(bytes.Buffer)
+	}
+
 	return
 }
 
@@ -62,7 +75,6 @@ output_fg_color :: proc(o: ^Output) -> ^Color {
 		if !is_tty(o) {
 			return 
 		}
-
 		o.fg_color = fg_color(o)
 	}
 
@@ -83,7 +95,6 @@ output_bg_color :: proc(o: ^Output) -> ^Color {
 		if !is_tty(o) {
 			return
 		}
-
 		o.bg_color = bg_color(o)
 	}
 
@@ -105,15 +116,41 @@ output_has_dark_bg :: proc(o: ^Output) -> bool {
 
 // Writer returns the underlying writer. This may be of type io.Writer,
 // io.ReadWriter, or ^os.File.
-writer :: proc(o: ^Output) -> os.Handle {
+get_writer :: proc(o: ^Output) -> os.Handle {
 	return o.w
 }
 
+// write writes the given bytes to the terminal output.
 write :: proc(o: ^Output, r: []u8) -> (int, os.Errno) {
 	return os.write(o.w, r)
 }
 
-// WriteString writes the given string to the output.
+// write_string writes the given string to the terminal output.
 write_string :: proc(o: ^Output, s: string) -> (int, os.Errno) {
 	return os.write_string(o.w, s)
+}
+
+// writes the given bytes to the pseudo terminal buffer
+buffer_write :: proc(o: ^Output, r: []u8) -> (int, io.Error) {
+	return bytes.buffer_write(o.buf, r)
+}
+
+// writes the given string to the pseudo terminal buffer
+buffer_write_string :: proc(o: ^Output, s: string) -> (int, io.Error) {
+	return bytes.buffer_write_string(o.buf, s)
+}
+
+// read bytes from the pseudo terminal buffer
+buffer_read_bytes :: proc(o: ^Output) -> []u8 {
+	return bytes.buffer_to_bytes(o.buf)
+}
+
+// read a string from the pseudo terminal buffer
+buffer_read_string :: proc(o: ^Output) -> string {
+	return bytes.buffer_to_string(o.buf)
+}
+
+// Buffer destructor
+buffer_destroy :: proc(o: ^Output) {
+	bytes.buffer_destroy(o.buf)
 }

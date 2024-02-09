@@ -7,23 +7,12 @@ import "core:strings"
 
 import kv "../"
 
-/*
-import (
-	"bytes"
-	"fmt"
-	"image/color"
-	"io"
-	"os"
-	"strings"
-	"testing"
-	"text/template"
-)
-*/
-
 expect  :: testing.expect
 log     :: testing.log
 errorf  :: testing.errorf
 
+// Not a great test because terminals normally have different
+// foreground and background colors?
 @(test)
 test_term_env :: proc(t: ^testing.T) {
 	using kv.Profile
@@ -31,7 +20,7 @@ test_term_env :: proc(t: ^testing.T) {
 	kv.init()
 	defer kv.close()
 
-	o := kv.new_output(os.stdout)
+	o := kv.new_output()
 	test := o.profile == ANSI256
 	err := fmt.tprintf("Expected %d got %d", ANSI256, o.profile)
 	expect(t, test, err)
@@ -51,6 +40,8 @@ test_term_env :: proc(t: ^testing.T) {
 	expect(t, test, err)
 
 	_ = kv.has_dark_background()
+	free(o)
+
 }
 
 @(test)
@@ -240,102 +231,12 @@ test_styles :: proc(t: ^testing.T) {
 	expect(t, test, err)
 }
 
-/*
 @(test)
-func TestTemplateHelpers(t *testing.T) {
-	p := TrueColor
-
-	exp := String("Hello World")
-	basetpl := `{{ %s "Hello World" }}`
-	wraptpl := `{{ %s (%s "Hello World") }}`
-
-	tt := []struct {
-		Template string
-		Expected string
-	}{
-		{
-			Template: fmt.Sprintf(basetpl, "Bold"),
-			Expected: exp.Bold().String(),
-		},
-		{
-			Template: fmt.Sprintf(basetpl, "Faint"),
-			Expected: exp.Faint().String(),
-		},
-		{
-			Template: fmt.Sprintf(basetpl, "Italic"),
-			Expected: exp.Italic().String(),
-		},
-		{
-			Template: fmt.Sprintf(basetpl, "Underline"),
-			Expected: exp.Underline().String(),
-		},
-		{
-			Template: fmt.Sprintf(basetpl, "Overline"),
-			Expected: exp.Overline().String(),
-		},
-		{
-			Template: fmt.Sprintf(basetpl, "Blink"),
-			Expected: exp.Blink().String(),
-		},
-		{
-			Template: fmt.Sprintf(basetpl, "Reverse"),
-			Expected: exp.Reverse().String(),
-		},
-		{
-			Template: fmt.Sprintf(basetpl, "CrossOut"),
-			Expected: exp.CrossOut().String(),
-		},
-		{
-			Template: fmt.Sprintf(wraptpl, "Underline", "Bold"),
-			Expected: String(exp.Bold().String()).Underline().String(),
-		},
-		{
-			Template: `{{ Color "#ff0000" "foobar" }}`,
-			Expected: String("foobar").Foreground(p.Color("#ff0000")).String(),
-		},
-		{
-			Template: `{{ Color "#ff0000" "#0000ff" "foobar" }}`,
-			Expected: String("foobar").
-				Foreground(p.Color("#ff0000")).
-				Background(p.Color("#0000ff")).
-				String(),
-		},
-		{
-			Template: `{{ Foreground "#ff0000" "foobar" }}`,
-			Expected: String("foobar").Foreground(p.Color("#ff0000")).String(),
-		},
-		{
-			Template: `{{ Background "#ff0000" "foobar" }}`,
-			Expected: String("foobar").Background(p.Color("#ff0000")).String(),
-		},
-	}
-
-	for i, v := range tt {
-		tpl, err := template.New(fmt.Sprintf("test_%d", i)).Funcs(TemplateFuncs(p)).Parse(v.Template)
-		if err != nil {
-			t.Error(err)
-		}
-
-		var buf bytes.Buffer
-		err = tpl.Execute(&buf, nil)
-		if err != nil {
-			t.Error(err)
-		}
-
-		if buf.String() != v.Expected {
-			v1 := strings.ReplaceAll(v.Expected, "\x1b", "")
-			v2 := strings.ReplaceAll(buf.String(), "\x1b", "")
-			t.Errorf("Expected %s, got %s", v1, v2)
-		}
-	}
-}
-
-@(test)
-func TestEnvNoColor(t *testing.T) {
+test_env_no_color :: proc(t: ^testing.T) {
 	tests := []struct {
-		name     string
-		environ  []string
-		expected bool
+		name:     string,
+		environ:  []string,
+		expected: bool,
 	}{
 		{"no env", nil, false},
 		{"no_color", []string{"NO_COLOR", "Y"}, true},
@@ -350,85 +251,57 @@ func TestEnvNoColor(t *testing.T) {
 		{"clicolor=0+clicolor_force=0", []string{"CLICOLOR", "0", "CLICOLOR_FORCE", "0"}, true},
 		{"clicolor=1+clicolor_force=0", []string{"CLICOLOR", "1", "CLICOLOR_FORCE", "0"}, false},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			defer func() {
-				os.Unsetenv("NO_COLOR")
-				os.Unsetenv("CLICOLOR")
-				os.Unsetenv("CLICOLOR_FORCE")
-			}()
-			for i := 0; i < len(test.environ); i += 2 {
-				os.Setenv(test.environ[i], test.environ[i+1])
-			}
-			out := NewOutput(os.Stdout)
-			actual := out.EnvNoColor()
-			if test.expected != actual {
-				t.Errorf("expected %t but was %t", test.expected, actual)
-			}
-		})
+	for test in tests {
+		defer proc() {
+			os.unset_env("NO_COLOR")
+			os.unset_env("CLICOLOR")
+			os.unset_env("CLICOLOR_FORCE")
+		}()
+		for i := 0; i < len(test.environ); i += 2 {
+			os.set_env(test.environ[i], test.environ[i+1])
+		}
+		out := kv.new_output()
+		actual := kv.output_env_no_color(out)
+		comp := test.expected == actual 
+		err := fmt.tprintf("expected %t but was %t", comp, actual)
+		expect(t, comp, err)
+		free(out)
 	}
 }
 
 @(test)
-func TestPseudoTerm(t *testing.T) {
-	buf := &bytes.Buffer{}
-	o := NewOutput(buf)
-	if o.Profile != Ascii {
-		t.Errorf("Expected %d, got %d", Ascii, o.Profile)
-	}
+test_pseudo_term :: proc(t: ^testing.T) {
+	using kv.Profile
 
-	fg := o.ForegroundColor()
-	fgseq := fg.Sequence(false)
-	if fgseq != "" {
-		t.Errorf("Expected empty response, got %s", fgseq)
-	}
-
-	bg := o.BackgroundColor()
-	bgseq := bg.Sequence(true)
-	if bgseq != "" {
-		t.Errorf("Expected empty response, got %s", bgseq)
-	}
+	// Enabling the buffer assumes a no tty pseudo terminal
+	o := kv.new_output(buffer = true)
+	test := o.profile == Ascii
+	err := fmt.tprintf("Expected %d, got %d", Ascii, o.profile)
+	expect(t, test, err)
+	
+	fg := kv.output_fg_color(o)
+	fgseq := kv.sequence(fg, false)
+	test = fgseq == ""
+	err = fmt.tprintf("Expected empty response, got %s", fgseq)
+	expect(t, test, err)
+	
+	bg := kv.output_bg_color(o)
+	bgseq := kv.sequence(bg, true)
+	test = bgseq == ""
+	err = fmt.tprintf("Expected empty response, got %s", bgseq)
+	expect(t, test, err)
 
 	exp := "foobar"
-	out := o.String(exp)
-	out = out.Foreground(o.Color("#abcdef"))
-	o.Write([]byte(out.String()))
+	out := kv.new_style(exp, o.profile)
+	kv.set_style_foreground(out, kv.color(o.profile, "#abcdef"))
+	kv.buffer_write_string(o, kv.get_string(out))
 
-	if buf.String() != exp {
-		t.Errorf("Expected %s, got %s", exp, buf.String())
-	}
+	str := kv.buffer_read_string(o) 
+	test = str == exp
+	err = fmt.tprintf("Expected %s, got %s", exp, str)
+	expect(t, test, err)
+
+	kv.buffer_destroy(o)
+	free(o)
+
 }
-
-@(test)
-func TestCache(t *testing.T) {
-	o := NewOutput(os.Stdout, WithColorCache(true), WithProfile(TrueColor))
-
-	if o.cache != true {
-		t.Errorf("Expected cache to be active, got %t", o.cache)
-	}
-}
-
-@(test)
-func TestEnableVirtualTerminalProcessing(t *testing.T) {
-	// EnableVirtualTerminalProcessing should always return a non-nil
-	// restoreFunc, and in tests it should never return an error.
-	restoreFunc, err := EnableVirtualTerminalProcessing(NewOutput(os.Stdout))
-	if restoreFunc == nil || err != nil {
-		t.Fatalf("expected non-<nil>, <nil>, got %p, %v", restoreFunc, err)
-	}
-	// In tests, restoreFunc should never return an error.
-	if err := restoreFunc(); err != nil {
-		t.Fatalf("expected <nil>, got %v", err)
-	}
-}
-
-@(test)
-func TestWithTTY(t *testing.T) {
-	for _, v := range []bool{true, false} {
-		o := NewOutput(io.Discard, WithTTY(v))
-		if o.isTTY() != v {
-			t.Fatalf("expected WithTTY(%t) to set isTTY to %t", v, v)
-		}
-	}
-}
-*/

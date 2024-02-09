@@ -9,6 +9,7 @@ import "core:unicode/utf8"
 import "core:os"
 import "core:c"
 import "core:c/libc"
+import "core:bytes"
 
 import sys "syscalls"
 
@@ -31,6 +32,9 @@ when ODIN_OS != .Windows {
 		// restore colors and disable raw mode
 		fmt.fprintf(output.w, "\e[0m")
 		sys.disable_raw_mode()
+		// destroy output buffer
+		if output.write_buf do buffer_destroy(output)
+		free(output)
 	}
 
 	// ColorProfile returns the supported color profile:
@@ -126,7 +130,7 @@ when ODIN_OS != .Windows {
 	}
 
 	wait_for_data :: proc(o: ^Output, timeout: time.Duration) -> Errno {
-		fd := int(writer(o))
+		fd := int(get_writer(o))
 		return Errno(sys.wait_for_data(fd, timeout))
 	}
 
@@ -138,7 +142,7 @@ when ODIN_OS != .Windows {
 		}
 
 		b: [1]byte
-		n, err := os.read(writer(o), b[:])
+		n, err := os.read(get_writer(o), b[:])
 		if err != 0 {
 			return 0, Errno(err)
 		}
@@ -219,7 +223,7 @@ when ODIN_OS != .Windows {
 			return "", Errno(Err_Status_Report)
 		}
 
-		tty := writer(o)
+		tty := get_writer(o)
 		if tty == 0 {
 			return "", Errno(Err_Status_Report)
 		}

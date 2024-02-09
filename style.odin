@@ -24,9 +24,9 @@ Style :: struct {
 }
 
 // new_style returns a new Style.
-new_style :: proc(s: string, profile := Profile.ANSI) -> (style: ^Style) {
+new_style :: proc(s: string, p := Profile.ANSI) -> (style: ^Style) {
 	style = new(Style)
-	style.profile = profile
+	style.profile = p
 	style.str = s
 	style.styles = make([dynamic]string)
 	return

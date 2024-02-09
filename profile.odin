@@ -16,14 +16,6 @@ Profile :: enum {
 	Ascii,
 }
 
-// String returns a new Style.
-profile_string :: proc(p: Profile, s: ..string) -> Style {
-	return Style{
-		profile = p,
-		str = strings.join(s, " "),
-	}
-}
-
 // Convert transforms a given Color to a Color supported within the Profile.
 profile_convert :: proc(p: Profile, c: ^Color) -> ^Color {
 	using Profile

@@ -30,8 +30,8 @@ when ODIN_OS != .Windows {
 
 	close :: proc() {
 		// restore colors and disable raw mode
-		fmt.fprintf(output.w, "\e[0m")
 		sys.disable_raw_mode()
+		restore_screen(output)
 		// destroy output buffer
 		if output.write_buf do buffer_destroy(output)
 		free(output)

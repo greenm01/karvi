@@ -28,6 +28,7 @@ when ODIN_OS == .Linux {
       enable_raw_mode  :: proc() ---
       disable_raw_mode :: proc() ---
       get_env          :: proc(cstring) -> cstring ---
+      tc_flush         :: proc(fd: c.int) -> c.int ---
    }
 
    is_atty :: proc(fd: os.Handle) -> int {
@@ -82,6 +83,12 @@ when ODIN_OS == .Linux {
          env_str = string(env[i])
       }
       return
+   }
+
+   check_terminal :: proc(fd: os.Handle) -> int {
+      t := new(Termios)
+      defer free(t)
+      return int(get_termios(t))
    }
 
    main :: proc() {

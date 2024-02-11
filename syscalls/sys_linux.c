@@ -48,6 +48,10 @@ int set_termios(struct termios *t) {
   return tcsetattr(STDOUT_FILENO, TCSAFLUSH, t);
 }
 
+int tc_flush(int fd) {
+  tcflush(fd, TCIOFLUSH);  
+}
+
 struct termios orig_termios;
 
 void disable_raw_mode() {

@@ -29,6 +29,14 @@ when ODIN_OS == .Linux {
       disable_raw_mode :: proc() ---
       get_env          :: proc(cstring) -> cstring ---
       tc_flush         :: proc(fd: c.int) -> c.int ---
+      get_screen_width :: proc(fd: c.int) -> c.ushort ---
+      get_screen_height :: proc(fd: c.int) -> c.ushort ---
+   }
+
+   screen_size :: proc(fd: os.Handle) -> (w, h: int) {
+      w = int(get_screen_width(c.int(fd)))
+      h = int(get_screen_height(c.int(fd)))
+      return
    }
 
    is_atty :: proc(fd: os.Handle) -> int {

@@ -65,3 +65,19 @@ void enable_raw_mode() {
   raw.c_lflag &= ~(ECHO | ICANON);
   tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 }
+
+struct winsize get_screen_size(int fd) {
+    struct winsize ws;
+    ioctl(fd, TIOCGWINSZ, &ws);
+    return ws;
+}
+
+unsigned short get_screen_width(int fd) {
+    struct winsize ws = get_screen_size(fd);
+    return ws.ws_col;
+}
+
+unsigned short get_screen_height(int fd) {
+    struct winsize ws = get_screen_size(fd);
+    return ws.ws_row;
+}

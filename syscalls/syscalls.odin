@@ -19,21 +19,24 @@ when ODIN_OS == .Linux {
       environ: []cstring
       echo: c.ulong
       icanon: c.ulong
-      isatty           :: proc(fd: c.int) -> c.int ---
-      wait_data        :: proc(fd: c.int, wait: c.long) -> c.int ---
-      get_ioctl        :: proc(fd: c.int, request: c.ulong, value: ^c.int) -> c.int ---
-      get_getpgid      :: proc(pid: c.int) -> c.int ---
-      get_termios      :: proc(t: ^Termios) -> c.int ---
-      set_termios      :: proc(t: ^Termios) -> c.int ---
-      enable_raw_mode  :: proc() ---
-      disable_raw_mode :: proc() ---
-      get_env          :: proc(cstring) -> cstring ---
-      tc_flush         :: proc(fd: c.int) -> c.int ---
-      get_screen_width :: proc(fd: c.int) -> c.ushort ---
-      get_screen_height :: proc(fd: c.int) -> c.ushort ---
+      isatty                 :: proc(fd: c.int) -> c.int ---
+      wait_data              :: proc(fd: c.int, wait: c.long) -> c.int ---
+      get_ioctl              :: proc(fd: c.int, request: c.ulong, value: ^c.int) -> c.int ---
+      get_getpgid            :: proc(pid: c.int) -> c.int ---
+      get_termios            :: proc(t: ^Termios) -> c.int ---
+      set_termios            :: proc(t: ^Termios) -> c.int ---
+      enable_raw_mode        :: proc() ---
+      disable_raw_mode       :: proc() ---
+      get_env                :: proc(cstring) -> cstring ---
+      tc_flush               :: proc(fd: c.int) -> c.int ---
+      get_screen_width       :: proc(fd: c.int) -> c.ushort ---
+      get_screen_height      :: proc(fd: c.int) -> c.ushort ---
+      init_event_handler    :: proc() -> c.int ---
+      close_event_handler   :: proc() -> c.int ---
+      wait_event             :: proc(timeout: c.int) -> c.int ---
    }
 
-   screen_size :: proc(fd: os.Handle) -> (w, h: int) {
+   window_size :: proc(fd: os.Handle) -> (w, h: int) {
       w = int(get_screen_width(c.int(fd)))
       h = int(get_screen_height(c.int(fd)))
       return

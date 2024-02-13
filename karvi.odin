@@ -40,8 +40,8 @@ is_tty :: proc(o: ^Output) -> bool {
 }
 
 // return the screen size for default terminal
-screen_size :: proc() -> (width, height: int) {
-	return sys.screen_size(output.w)
+window_size :: proc() -> (width, height: int) {
+	return sys.window_size(output.w)
 }
 
 // color_profile returns the supported color profile:

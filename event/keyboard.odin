@@ -10,14 +10,9 @@ con: os.Handle
 stdin := os.stdin
 input_tty: os.Handle
 
-//mock_channel := make(chan: Key)
-mocking: bool
-
 start_listener :: proc() -> Errno {
 	err := init_input()
 	if err != 0 do return err
-
-	if mocking do return 0
 
 	// TODO: check for raw mode?
 	
@@ -28,5 +23,5 @@ start_listener :: proc() -> Errno {
 }
 
 stop_listener :: proc() -> Errno {
-	return restore_input()
+	return close_input()
 }

@@ -15,7 +15,7 @@ main :: proc() {
 	ev.start_listener()
 
 	fmt.println("start pressing keys and the click mouse. ESC to quit.")
-	fmt.println("screen size =", kv.screen_size())
+	fmt.println("screen size =", kv.window_size())
 
 	using ev.Mouse_Modifiers
 
@@ -38,7 +38,10 @@ main :: proc() {
 					fmt.print(" modifier =", Drag)
 				}
 				fmt.println()
-
+			case ev.Resize:
+				fmt.println("window resize")
+				fmt.println("width =", e.width, "height =", e.height)
+				fmt.println("delta x =", e.delta_width, "delta y =", e.delta_height)
 		}
 	}
 

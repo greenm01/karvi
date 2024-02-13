@@ -1,11 +1,19 @@
 package event
 
+import "core:c"
 import "core:time"
 import "core:os"
 import "core:fmt"
 import "core:unicode/utf8"
 import "core:strconv"
 import "core:bytes"
+import "core:thread"
+
+import kv "../"
+import sys "../syscalls"
+
+// resize hander timeot in ms
+HANDLER_TIMEOUT :: 5000
 
 Event :: struct {
 	type: Event_Type,
@@ -14,42 +22,50 @@ Event :: struct {
 Event_Type :: union {
 	Key,
 	Mouse,
-	//Resize,
+	Resize,
 }
 
 // checks to see if there's an event available within the specified time
-poll :: proc(poll_time: time.Duration) -> (^Event, Errno) {
-	buf: []byte
-	err: Errno
-	
+poll :: proc(poll_time: time.Duration) -> (event: ^Event, err: Errno) {
 	stopwatch := time.Stopwatch{}
 	time.stopwatch_start(&stopwatch)
 
 	for time.stopwatch_duration(stopwatch) < poll_time {
-		if buf, err = read_internal(); err != 0 {
-			return nil, err
-		}	
-		if len(buf) > 0 do break
+		if event, err = get_event(); err == 0 {
+			return event, err	
+		}
+		time.sleep(1 * time.Millisecond)
 	}
 
-	return parse_event(buf)
+	return nil, -1
 }
 
-
 // Returns an event immediately (if available) or waits and blocks until one is
-read :: proc() -> (^Event, Errno) {
-	buf: []byte
-	err: Errno
-	
+read :: proc() -> (event: ^Event, err: Errno) {
 	for {
-		if buf, err = read_internal(); err != 0 {
-			return nil, err
+ 		if event, err = get_event(); err == 0 {
+			return event, err	
 		}
-		if len(buf) > 0 do break
+		time.sleep(1 * time.Millisecond)
 	}
-
-	return parse_event(buf)
+	return nil, -1
 } 
+
+@(private)
+get_event :: proc() -> (^Event, Errno) {
+	if rsp := sys.wait_event(c.int(HANDLER_TIMEOUT)); rsp > 0 {
+		switch rsp {
+			case 1:
+				buf, err := read_internal()
+				if err == 0 && len(buf) > 0 do return parse_event(buf)
+			case 2:
+				w, h := sys.window_size(kv.output.w)
+				update_window_size(window_size, w, h)									
+				return new_resize(window_size), 0
+		}
+	}
+	return nil, -1
+}
 
 @(private)
 read_internal :: proc() -> ([]byte, Errno) {
@@ -59,6 +75,7 @@ read_internal :: proc() -> ([]byte, Errno) {
 	return bytes.clone(buf[:num_bytes]), 0
 }
 
+@(private)
 parse_event :: proc(buf: []byte) -> (^Event, Errno) {
 	str := transmute(string)buf
 	// Check for a keyboard sequence
@@ -142,3 +159,4 @@ parse_event :: proc(buf: []byte) -> (^Event, Errno) {
 
 	return new_key(code = RuneKey, runes = runes[:]), 0
 }
+

@@ -2,7 +2,7 @@
 ANSI support for terminal applications with [Odin](https://odin-lang.org/) lang.
 
 The intent of this library is to serve as a base foundation for text user interfaces (TUI) and simple games/apps.
-Similar in funtionality to termbox2 and crossterm.
+Similar in funtionality to crossterm.
 
 ## Features
 

@@ -5,8 +5,8 @@ import "core:fmt"
 import kv "../../"
 
 main :: proc() {
-	kv.init()
-	defer kv.close()
+	kv.enable_raw_mode()
+	defer kv.disable_raw_mode()
 
 	// Basic ANSI colors 0 - 15
 	fmt.println(kv.set_bold("Basic ANSI colors"))

@@ -121,7 +121,7 @@ get_writer :: proc(o: ^Output) -> os.Handle {
 }
 
 // write writes the given bytes to the terminal output.
-write :: proc(o: ^Output, r: []u8) -> (int, os.Errno) {
+output_write :: proc(o: ^Output, r: []u8) -> (int, os.Errno) {
 	return os.write(o.w, r)
 }
 

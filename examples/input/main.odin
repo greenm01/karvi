@@ -7,14 +7,14 @@ import ev "../../event"
 
 main :: proc() {
 
-	kv.init()
-	defer kv.close()
+	kv.enable_raw_mode()
+	defer kv.disable_raw_mode()
 
 	kv.enable_mouse(kv.output)
 	kv.enable_mouse_cell_motion(kv.output)	
 	ev.start_listener()
 
-	fmt.println("start pressing keys and the click mouse. ESC to quit.")
+	kv.write("start pressing keys and the click mouse. ESC to quit.\n")
 	fmt.println("screen size =", kv.window_size())
 
 	using ev.Mouse_Modifiers

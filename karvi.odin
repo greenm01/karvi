@@ -39,6 +39,12 @@ is_tty :: proc(o: ^Output) -> bool {
 	return false
 }
 
+// output string to the default terminal
+write :: proc(s: string) {
+	data := transmute([]u8)s
+	os.write(output.w, data)	
+}
+
 // return the screen size for default terminal
 window_size :: proc() -> (width, height: int) {
 	return sys.window_size(output.w)

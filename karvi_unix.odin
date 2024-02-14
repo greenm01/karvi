@@ -22,13 +22,13 @@ when ODIN_OS != .Windows {
 	ECHO := sys.echo
 	ICANON := sys.icanon
 
-	init :: proc() -> Errno {
+	enable_raw_mode :: proc() -> Errno {
 		// TODO: add some error handling
 		sys.enable_raw_mode()
 		return 0	
 	}
 
-	close :: proc() {
+	disable_raw_mode :: proc() {
 		// restore colors and disable raw mode
 		sys.disable_raw_mode()
 		restore_screen(output)

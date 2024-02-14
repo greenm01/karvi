@@ -17,8 +17,8 @@ errorf  :: testing.errorf
 test_term_env :: proc(t: ^testing.T) {
 	using kv.Profile
 
-	kv.init()
-	defer kv.close()
+	kv.enable_raw_mode()
+	defer kv.disable_raw_mode()
 
 	o := kv.new_output()
 	test := o.profile == ANSI256

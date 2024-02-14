@@ -8,8 +8,8 @@ import kv "../../"
 
 main :: proc() {
 
-	err := kv.init()
-	defer kv.close()
+	err := kv.enable_raw_mode()
+	defer kv.disable_raw_mode()
 	
 	p := kv.color_profile()
 

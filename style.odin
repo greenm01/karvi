@@ -19,15 +19,13 @@ OVERLINE_SEQ  := string("53")
 // Style is a string that various rendering styles can be applied to.
 Style :: struct {
 	profile: Profile,
-	str    : string,
 	styles : [dynamic]string,
 }
 
 // new_style returns a new Style.
-new_style :: proc(s: string, p := Profile.ANSI) -> (style: ^Style) {
+new_style :: proc(p := Profile.ANSI) -> (style: ^Style) {
 	style = new(Style)
 	style.profile = p
-	style.str = s
 	style.styles = make([dynamic]string)
 	return
 }
@@ -37,65 +35,65 @@ del_style :: proc(s: ^Style) {
 	free(s)
 }
 
-get_string :: proc(t: ^Style) -> string {
-	return styled(t, t.str)
+render_style :: proc(t: ^Style, s: string) -> string {
+	return styled(t, s)
 }
 
 set_bold :: proc(s: string) -> string {
-	style := new_style(s)
+	style := new_style()
 	defer del_style(style)
 	enable_bold(style)
-	return get_string(style)
+	return render_style(style, s)
 }
 
 set_faint :: proc(s: string) -> string {
-	style := new_style(s)
+	style := new_style()
 	defer del_style(style)
 	enable_faint(style)
-	return get_string(style)
+	return render_style(style, s)
 }
 
 set_italic :: proc(s: string) -> string {
-	style := new_style(s)
+	style := new_style()
 	defer del_style(style)
 	enable_italic(style)
-	return get_string(style)
+	return render_style(style, s)
 }
 
 set_underline :: proc(s: string) -> string {
-	style := new_style(s)
+	style := new_style()
 	defer del_style(style)
 	enable_underline(style)
-	return get_string(style)
+	return render_style(style, s)
 }
 
 set_crossout :: proc(s: string) -> string {
-	style := new_style(s)
+	style := new_style()
 	defer del_style(style)
 	enable_crossout(style)
-	return get_string(style)
+	return render_style(style, s)
 }
 
 set_foreground :: proc(s: string, fg: ^Color) -> string {
-	style := new_style(s)
+	style := new_style()
 	defer del_style(style)
 	set_style_foreground(style, fg)
-	return get_string(style)	
+	return render_style(style, s)	
 }
 
 set_background :: proc(s: string, bg: ^Color) -> string {
-	style := new_style(s)
+	style := new_style()
 	defer del_style(style)
 	set_style_background(style, bg)
-	return get_string(style)	
+	return render_style(style, s)	
 }
 
 set_foreground_background :: proc(s: string, fg, bg: ^Color) -> string {
-	style := new_style(s)
+	style := new_style()
 	defer del_style(style)
 	set_style_foreground(style, fg)
 	set_style_background(style, bg)
-	return get_string(style)	
+	return render_style(style, s)	
 }
 
 // foreground sets a foreground color.
@@ -106,10 +104,6 @@ set_style_foreground :: proc(t: ^Style, c: ^Color) {
 // background sets a background color.
 set_style_background :: proc(t: ^Style, c: ^Color) {
 	append(&t.styles, sequence(c, true))
-}
-
-render_style :: proc(t: ^Style) -> string {
-	return styled(t, t.str)
 }
 
 // styled renders s with all applied styles.
@@ -171,7 +165,7 @@ enable_crossout :: proc(t: ^Style) {
 	append(&t.styles, CROSSOUT_SEQ)
 }
 
-// width returns the width required to print all runes in Style.
-width :: proc(t: ^Style) -> int {
-	return wc.string_width(t.str)
+// width returns the width required to print all runes in string
+string_width :: proc(s: string) -> int {
+	return wc.string_width(s)
 }

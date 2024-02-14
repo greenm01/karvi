@@ -47,8 +47,8 @@ test_term_env :: proc(t: ^testing.T) {
 @(test)
 test_rende_ring :: proc(t: ^testing.T) {
 	using kv.Profile
-	out := kv.new_style("foobar", True_Color)
-	test := kv.get_string(out) == "foobar" 
+	out := kv.new_style(True_Color)
+	test := kv.render_style(out, "foobar") == "foobar" 
 	expect(t, test, "Unstyled strings should be returned as plain text")
 
 	kv.set_style_foreground(out, kv.color(True_Color, "#abcdef"))
@@ -60,14 +60,14 @@ test_rende_ring :: proc(t: ^testing.T) {
 	kv.enable_blink(out)
 
 	exp := "\x1b[38;2;171;205;239;48;5;69;1;3;2;4;5mfoobar\x1b[0m"
-	test = kv.get_string(out) == exp 
-	err := fmt.tprintf("Expected %s, got %s", exp, kv.get_string(out))
+	test = kv.render_style(out, "foobar") == exp 
+	err := fmt.tprintf("Expected %s, got %s", exp, kv.render_style(out, "foobar"))
 	expect(t, test, err)
 
 	exp = "foobar"
-	mono := kv.new_style(exp, Ascii)
+	mono := kv.new_style(Ascii)
 	kv.set_style_foreground(mono, kv.new_rgb_color("#abcdef"))
-	test = kv.get_string(mono) == exp
+	test = kv.render_style(mono, exp) == exp
 	err = fmt.tprintf("Ascii profile should not apply color styles")
 	expect(t, test, err)
 }
@@ -292,9 +292,9 @@ test_pseudo_term :: proc(t: ^testing.T) {
 	expect(t, test, err)
 
 	exp := "foobar"
-	out := kv.new_style(exp, o.profile)
+	out := kv.new_style(o.profile)
 	kv.set_style_foreground(out, kv.color(o.profile, "#abcdef"))
-	kv.buffer_write_string(o, kv.get_string(out))
+	kv.buffer_write_string(o, kv.render_style(out, exp))
 
 	str := kv.buffer_read_string(o) 
 	test = str == exp

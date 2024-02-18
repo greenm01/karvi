@@ -1,3 +1,0 @@
-[submodule "deps/wcwidth"]
-	path = wcwidth
-	url = git@github.com:greenm01/wcwidth.git

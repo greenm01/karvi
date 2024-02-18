@@ -3,7 +3,7 @@ package karvi
 import "core:fmt"
 import "core:strings"
 
-import wc "deps/wcwidth"
+import wc "wcwidth"
 
 // Sequence definitions.
 RESET_SEQ     := string("0")
